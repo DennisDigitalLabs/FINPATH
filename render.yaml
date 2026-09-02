@@ -1,0 +1,41 @@
+services:
+  - type: web
+    name: finpath-backend
+    env: python
+    rootDir: .
+    buildCommand: "pip install --upgrade pip && pip install -r requirements-production.txt"
+    startCommand: "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8000"
+    disk:
+      name: finpath-sqlite-data
+      mountPath: /var/lib/render/project/data
+      sizeGB: 1
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: DATABASE_URL
+        value: sqlite:////var/lib/render/project/data/finpath.db
+      - key: SQLITE_DB_PATH
+        value: /var/lib/render/project/data/finpath.db
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: CORS_ORIGINS
+        value: '["https://finpath-frontend.onrender.com"]'
+      - key: MODEL_PATH
+        value: models/v1
+      - key: MODEL_VERSION
+        value: v1
+
+staticSites:
+  - name: finpath-frontend
+    staticPublishPath: frontend
+    buildCommand: ""
+    envVars:
+      - key: API_BASE_URL
+        value: "https://finpath-backend.onrender.com"
+

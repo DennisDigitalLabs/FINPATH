@@ -1,0 +1,44 @@
+# FINPATH Production Requirements
+# Python: 3.13.9 (verified with Anaconda)
+# This file contains the exact versions known to work with the trained ML model and FINPATH application
+# Created: 2025-08-31
+# DO NOT modify arbitrarily - all versions have been tested together
+
+# Web Framework & Server
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+starlette>=0.27.0
+pydantic==2.5.0
+pydantic-settings==2.1.0
+email-validator>=2.0.0
+
+# Database
+sqlalchemy==2.0.23
+alembic==1.12.1
+
+# Security & Authentication  
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+bcrypt<5
+python-multipart==0.0.6
+cryptography>=41.0.0
+
+# Data Processing & Validation
+python-dateutil==2.8.2
+
+# ML Runtime Stack (CRITICAL: Versions validated with trained model)
+# Model trained with scikit-learn 1.8.0; runtime 1.7.2 produces informational warnings only
+numpy>=1.26,<3.0
+pandas>=2.0.0,<3.0
+scikit-learn==1.8.0
+xgboost==3.4.1
+joblib>=1.4.0,<2.0
+shap>=0.45.0,<1.0
+scipy>=1.10.0  # Required by scikit-learn and xgboost
+
+# Utilities
+python-dotenv==1.0.0
+typing-extensions>=4.0.0
+
+# HTTP Client (for internal requests if needed)
+httpx>=0.25.0

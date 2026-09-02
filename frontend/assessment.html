@@ -1,0 +1,524 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Complete the FINPATH financial inclusion and risk assessment.">
+	<title>Assessment | FINPATH</title>
+	<link rel="stylesheet" href="css/style.css">
+	<link rel="stylesheet" href="css/responsive.css">
+	<link rel="stylesheet" href="css/assessment.css">
+</head>
+<body class="assessment-page">
+	<header class="assessment-header">
+		<nav class="site-nav" aria-label="Primary navigation">
+			<div class="container assessment-nav-inner">
+				<a class="brand" href="index.html" aria-label="FINPATH home"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>FINPATH</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
+				<div class="assessment-nav-links"><a class="nav-link" href="index.html">Home</a><a class="nav-link active" href="assessment.html" aria-current="page">Assessment</a><a class="nav-link" href="login.html">Log In</a></div>
+			</div>
+		</nav>
+	</header>
+
+	<main id="main-content">
+		<section class="assessment-intro" aria-labelledby="assessment-title">
+			<div class="container intro-inner"><div><p class="eyebrow">Your clearer path</p><h1 id="assessment-title">Understand your financial inclusion journey.</h1><p class="intro-lede">Answer questions about your everyday financial experience and profile. Your answers help FINPATH organize the factors that shape access, confidence, and opportunity.</p></div><div class="intro-note"><span aria-hidden="true">✦</span><strong>About 8 minutes</strong><small>There are no right or wrong answers. Share only what you are comfortable sharing.</small></div></div>
+		</section>
+
+		<div class="container assessment-layout">
+			<aside class="assessment-sidebar" aria-label="Assessment progress"><div class="progress-summary"><span class="eyebrow">Your progress</span><strong id="progress-percent">0% complete</strong><div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Assessment progress"><span id="progress-bar"></span></div><small id="progress-detail">Getting started</small></div><ol class="step-list" id="step-list"><li class="step-item active"><span>01</span><div><strong>About you</strong><small>Personal information</small></div></li><li class="step-item"><span>02</span><div><strong>Income</strong><small>Work and earnings</small></div></li><li class="step-item"><span>03</span><div><strong>Commitments</strong><small>Expenses and outgoings</small></div></li><li class="step-item"><span>04</span><div><strong>Savings</strong><small>Financial habits</small></div></li><li class="step-item"><span>05</span><div><strong>Credit</strong><small>Debt and lending</small></div></li><li class="step-item"><span>06</span><div><strong>Services</strong><small>Access and usage</small></div></li><li class="step-item"><span>07</span><div><strong>Resilience</strong><small>Financial security</small></div></li><li class="step-item"><span>08</span><div><strong>Review</strong><small>Check your answers</small></div></li></ol></aside>
+
+			<section class="assessment-workspace" aria-live="polite">
+				<form id="assessment-form" novalidate>
+					<div class="step-counter" id="step-counter">Step 1 of 7 <span>About you</span></div>
+					<div class="validation-summary alert alert-danger" id="validation-summary" role="alert" hidden>Please complete the highlighted required fields before continuing.</div>
+
+					<!-- Section 1: About you - Personal profile -->
+					<fieldset class="assessment-step active" data-step="0" aria-labelledby="step-title-1">
+						<legend class="step-heading">
+							<span class="step-kicker">01 / About you</span>
+							<span id="step-title-1">Tell us about yourself</span>
+							<small>This helps us understand your financial profile and context.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="age-range">Age range <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="age-range" name="age_range" required>
+									<option value="">Select your age range</option>
+									<option value="18-24">18–24</option>
+									<option value="25-34">25–34</option>
+									<option value="35-44">35–44</option>
+									<option value="45-54">45–54</option>
+									<option value="55 or older">55 or older</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="sex">What is your gender? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="sex" name="sex" required>
+									<option value="">Select one</option>
+									<option value="Male">Male</option>
+									<option value="Female">Female</option>
+									<option value="Other">Other</option>
+									<option value="Prefer not to say">Prefer not to say</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="county">Which county do you live in? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="county" name="county" required>
+									<option value="">Select your county</option>
+									<option value="Mombasa">Mombasa</option><option value="Kwale">Kwale</option><option value="Kilifi">Kilifi</option><option value="Tana River">Tana River</option><option value="Lamu">Lamu</option><option value="Taita-Taveta">Taita-Taveta</option><option value="Garissa">Garissa</option><option value="Wajir">Wajir</option><option value="Mandera">Mandera</option><option value="Marsabit">Marsabit</option><option value="Isiolo">Isiolo</option><option value="Meru">Meru</option><option value="Tharaka-Nithi">Tharaka-Nithi</option><option value="Embu">Embu</option><option value="Kitui">Kitui</option><option value="Machakos">Machakos</option><option value="Makueni">Makueni</option><option value="Nyandarua">Nyandarua</option><option value="Nyeri">Nyeri</option><option value="Kirinyaga">Kirinyaga</option><option value="Murang'a">Murang'a</option><option value="Kiambu">Kiambu</option><option value="Turkana">Turkana</option><option value="West Pokot">West Pokot</option><option value="Samburu">Samburu</option><option value="Trans Nzoia">Trans Nzoia</option><option value="Uasin Gishu">Uasin Gishu</option><option value="Elgeyo-Marakwet">Elgeyo-Marakwet</option><option value="Nandi">Nandi</option><option value="Baringo">Baringo</option><option value="Laikipia">Laikipia</option><option value="Nakuru">Nakuru</option><option value="Narok">Narok</option><option value="Kajiado">Kajiado</option><option value="Kericho">Kericho</option><option value="Bomet">Bomet</option><option value="Kakamega">Kakamega</option><option value="Vihiga">Vihiga</option><option value="Bungoma">Bungoma</option><option value="Busia">Busia</option><option value="Siaya">Siaya</option><option value="Kisumu">Kisumu</option><option value="Homa Bay">Homa Bay</option><option value="Migori">Migori</option><option value="Kisii">Kisii</option><option value="Nyamira">Nyamira</option><option value="Nairobi City">Nairobi City</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="education">What is your highest level of education? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="education" name="education" required>
+									<option value="">Select one</option>
+									<option value="None">None</option>
+									<option value="Some primary">Some primary</option>
+									<option value="Primary completed">Primary completed</option>
+									<option value="Some secondary">Some secondary</option>
+									<option value="Secondary completed">Secondary completed</option>
+									<option value="Some technical training">Some technical training</option>
+									<option value="Completed technical training">Completed technical training</option>
+									<option value="Some university">Some university</option>
+									<option value="University completed">University completed</option>
+									<option value="Other">Other</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="marital-status">What is your marital status? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="marital-status" name="marital_status" required>
+									<option value="">Select one</option>
+									<option value="Single / Never Married">Single / Never Married</option>
+									<option value="Divorced / Separated">Divorced / Separated</option>
+									<option value="Widowed">Widowed</option>
+									<option value="Married / Living with partner">Married / Living with partner</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="location-type">Where do you currently live? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="location-type" name="location_type" required>
+									<option value="">Select one</option>
+									<option>Urban area</option>
+									<option>Peri-urban area</option>
+									<option>Rural area</option>
+								</select>
+								<small class="form-text">This provides useful context for understanding your financial access.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="household-size">People in your household <span class="form-required" aria-label="required">*</span></label>
+								<input class="form-control" id="household-size" name="household_size" type="number" min="1" max="30" inputmode="numeric" placeholder="e.g. 3" required>
+								<small class="form-text">This helps us understand your family context.</small>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 2: Income - Contextual -->
+					<fieldset class="assessment-step" data-step="1" aria-labelledby="step-title-2" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">02 / Income</span>
+							<span id="step-title-2">Tell us about your income</span>
+							<small>Use an estimate if your income changes from month to month.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="employment-status">Current work status <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="employment-status" name="employment_status" required>
+									<option value="">Select one</option>
+									<option>Employed full-time</option>
+									<option>Employed part-time</option>
+									<option>Self-employed</option>
+									<option>Casual or seasonal work</option>
+									<option>Currently not working</option>
+									<option>Student</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="monthly-income">Approximate monthly income (KES) <span class="form-required" aria-label="required">*</span></label>
+								<input class="form-control" id="monthly-income" name="monthly_income" type="number" min="0" step="100" inputmode="numeric" placeholder="e.g. 25000" required>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="income-reliability">How predictable is your income? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="income-reliability" name="income_reliability" required>
+									<option value="">Select one</option>
+									<option>Very predictable</option>
+									<option>Mostly predictable</option>
+									<option>Changes often</option>
+									<option>Highly unpredictable</option>
+								</select>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 3: Commitments - Contextual -->
+					<fieldset class="assessment-step" data-step="2" aria-labelledby="step-title-3" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">03 / Commitments</span>
+							<span id="step-title-3">Map your regular outgoings</span>
+							<small>A broad view of monthly commitments is enough.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="monthly-expenses">Approximate monthly expenses (KES) <span class="form-required" aria-label="required">*</span></label>
+								<input class="form-control" id="monthly-expenses" name="monthly_expenses" type="number" min="0" step="100" inputmode="numeric" placeholder="e.g. 18000" required>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="financial-dependents">People financially dependent on you <span class="form-required" aria-label="required">*</span></label>
+								<input class="form-control" id="financial-dependents" name="financial_dependents" type="number" min="0" max="30" inputmode="numeric" placeholder="e.g. 1" required>
+								<small class="form-text">This provides context for understanding your financial commitments.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="bill-pressure">How often do bills feel difficult to cover? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="bill-pressure" name="bill_pressure" required>
+									<option value="">Select one</option>
+									<option>Never</option>
+									<option>Rarely</option>
+									<option>Sometimes</option>
+									<option>Often</option>
+									<option>Almost always</option>
+								</select>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 4: Savings - Financial habits with model-required savings usage -->
+					<fieldset class="assessment-step" data-step="3" aria-labelledby="step-title-4" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">04 / Savings</span>
+							<span id="step-title-4">Explore your financial habits</span>
+							<small>These questions focus on your savings practices and emergency planning.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="savings-usage">Do you currently save through any formal or informal arrangements? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="savings-usage" name="savings_usage" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">This includes bank accounts, SACCOs, savings groups, or keeping money at home.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="emergency-savings">How long could your savings cover essentials? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="emergency-savings" name="emergency_savings" required>
+									<option value="">Select one</option>
+									<option value="Less than one month">Less than one month</option>
+									<option value="One to three months">One to three months</option>
+									<option value="More than three months">More than three months</option>
+									<option value="I do not have savings">I do not have savings</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="saves-regularly">How often do you save money? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="saves-regularly" name="saves_regularly" required>
+									<option value="">Select one</option>
+									<option>Every month</option>
+									<option>Most months</option>
+									<option>Occasionally</option>
+									<option>Rarely</option>
+									<option>Never</option>
+								</select>
+								<small class="form-text">This is contextual information to help us understand your savings behavior.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="budgeting">How often do you plan a budget? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="budgeting" name="budgeting" required>
+									<option value="">Select one</option>
+									<option>Regularly</option>
+									<option>Sometimes</option>
+									<option>Rarely</option>
+									<option>Never</option>
+								</select>
+								<small class="form-text">Contextual information about your planning habits.</small>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 5: Credit & Lending -->
+					<fieldset class="assessment-step" data-step="4" aria-labelledby="step-title-5" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">05 / Credit</span>
+							<span id="step-title-5">Tell us about credit and borrowing</span>
+							<small>You can answer openly; this is not a credit application.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="loan-usage">Have you borrowed money or used credit in the past two years? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="loan-usage" name="loan_usage" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">This includes bank loans, formal lenders, informal loans, or mobile credit.</small>
+							</div>
+							<div class="form-group" id="formal-loan-group" hidden>
+								<label class="form-label" for="loan-formal">Have you used a formal loan (bank or licensed lender)? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="loan-formal" name="loan_formal" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+							</div>
+							<div class="form-group" id="informal-loan-group" hidden>
+								<label class="form-label" for="loan-informal">Have you used informal borrowing (friends, family, or group)? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="loan-informal" name="loan_informal" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+							</div>
+							<div class="form-group" id="digital-credit-group" hidden>
+								<label class="form-label" for="digital-credit-usage">Have you used digital credit or mobile loans? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="digital-credit-usage" name="digital_credit_usage" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">Examples: M-Pesa loans, other digital lenders.</small>
+							</div>
+							<div class="form-group" id="loan-app-group" hidden>
+								<label class="form-label" for="loan-app-usage">Have you used a digital loan app or platform? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="loan-app-usage" name="loan_app_2" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+							</div>
+							<div class="form-group" id="fuliza-group" hidden>
+								<label class="form-label" for="fuliza-usage">Have you used Fuliza or instant credit services? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="fuliza-usage" name="loan_fuliza_2" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">Quick mobile credit services available to your account.</small>
+							</div>
+							<div class="form-group" id="loan-default-group" hidden>
+								<label class="form-label" for="loan-default">Have you ever defaulted or missed payments on a loan? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="loan-default" name="defaulted" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">This is about your personal lending history, not judgmental.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="debt-repayment">How manageable are your current repayments? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="debt-repayment" name="debt_repayment" required>
+									<option value="">Select one</option>
+									<option>Very manageable</option>
+									<option>Manageable</option>
+									<option>Sometimes difficult</option>
+									<option>Very difficult</option>
+									<option>I have no repayments</option>
+								</select>
+								<small class="form-text">Contextual information to understand your situation.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="credit-barrier">What most limits access to credit? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="credit-barrier" name="credit_barrier" required>
+									<option value="">Select one</option>
+									<option>Cost of borrowing</option>
+									<option>Collateral requirements</option>
+									<option>Documentation requirements</option>
+									<option>Limited information</option>
+									<option>Nothing in particular</option>
+								</select>
+								<small class="form-text">Contextual information to understand barriers you face.</small>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 6: Services & Digital -->
+					<fieldset class="assessment-step" data-step="5" aria-labelledby="step-title-6" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">06 / Services</span>
+							<span id="step-title-6">Tell us about your financial services</span>
+							<small>We want to understand which services you use and how.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="account-access">Do you currently have a bank or mobile money account? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="account-access" name="account_access" required>
+									<option value="">Select one</option>
+									<option>Yes, a bank account</option>
+									<option>Yes, a mobile money account</option>
+									<option>Yes, both</option>
+									<option>No</option>
+								</select>
+								<small class="form-text">Contextual information about your service access.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="service-distance">How easy is it to reach a financial service provider? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="service-distance" name="service_distance" required>
+									<option value="">Select one</option>
+									<option>Very easy</option>
+									<option>Somewhat easy</option>
+									<option>Somewhat difficult</option>
+									<option>Very difficult</option>
+								</select>
+								<small class="form-text">Contextual: helps us understand your access barriers.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="digital-confidence">How confident are you using digital financial services? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="digital-confidence" name="digital_confidence" required>
+									<option value="">Select one</option>
+									<option>Very confident</option>
+									<option>Confident</option>
+									<option>Not very confident</option>
+									<option>Not at all confident</option>
+								</select>
+								<small class="form-text">Contextual: helps us understand your digital comfort.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="chama-usage">Do you participate in a savings group or community savings arrangement (Chama)? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="chama-usage" name="chama_usage" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="sacco-usage">Do you use a SACCO (Savings and Credit Cooperative Organization)? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="sacco-usage" name="sacco_use" required>
+									<option value="">Select one</option>
+									<option value="No">No</option>
+									<option value="Occasional">Occasional member or user</option>
+									<option value="Regular">Regular member or user</option>
+								</select>
+								<small class="form-text">Member of or user of SACCO services.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="mobile-money-usage">Do you use mobile money services? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="mobile-money-usage" name="mobile_money_use" required>
+									<option value="">Select one</option>
+									<option value="No">No</option>
+									<option value="Occasional">Occasional user</option>
+									<option value="Regular">Regular user</option>
+								</select>
+								<small class="form-text">Services like M-Pesa, Airtel Money, or similar.</small>
+							</div>
+							<div class="form-group" id="mobile-money-frequency-group" hidden>
+								<label class="form-label" for="mobile-money-frequency">How often do you conduct transactions on mobile money? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="mobile-money-frequency" name="S7_2" required>
+									<option value="">Select one</option>
+									<option value="1">Several times a week (frequent)</option>
+									<option value="2">At least once a week (somewhat frequent)</option>
+									<option value="3">A few times a month (occasional)</option>
+									<option value="4">Rarely or never (minimal use)</option>
+								</select>
+								<small class="form-text">This helps us understand your digital engagement level.</small>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 7: Knowledge & Resilience -->
+					<fieldset class="assessment-step" data-step="6" aria-labelledby="step-title-7" hidden>
+						<legend class="step-heading">
+							<span class="step-kicker">07 / Resilience</span>
+							<span id="step-title-7">Tell us about your financial resilience and knowledge</span>
+							<small>These questions help us understand your financial security and capability.</small>
+						</legend>
+						<div class="question-grid">
+							<div class="form-group">
+								<label class="form-label" for="experienced-shock">Have you experienced a major financial shock in the past year? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="experienced-shock" name="experienced_shock" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">Examples: job loss, major illness, death in family, business loss.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="access-13k">Could you access KES 13,000 within one month if you needed it for an emergency? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="access-13k" name="accessto_13k_1month" required>
+									<option value="">Select one</option>
+									<option value="Yes">Yes</option>
+									<option value="No">No</option>
+								</select>
+								<small class="form-text">This reflects your financial buffer for emergencies.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="livelihood-count">How many distinct sources of income or livelihood do you have? <span class="form-required" aria-label="required">*</span></label>
+								<input class="form-control" id="livelihood-count" name="CountLivelihood" type="number" min="1" max="10" inputmode="numeric" placeholder="e.g. 2" required>
+								<small class="form-text">Examples: main job, side business, farming, investments, etc.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="financial-confidence">How confident are you making financial decisions? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="financial-confidence" name="financial_confidence" required>
+									<option value="">Select one</option>
+									<option>Very confident</option>
+									<option>Somewhat confident</option>
+									<option>Not very confident</option>
+									<option>Not at all confident</option>
+								</select>
+								<small class="form-text">Contextual: your general confidence level.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="financial-literacy-score">How would you rate your financial knowledge? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="financial-literacy-score" name="financial_literacy_score" required>
+									<option value="">Select one</option>
+									<option value="1">Very knowledgeable</option>
+									<option value="2">Somewhat knowledgeable</option>
+									<option value="3">Average knowledge</option>
+									<option value="4">Limited knowledge</option>
+								</select>
+								<small class="form-text">Your self-assessed level of financial knowledge and understanding.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="financial-information">Where do you usually get financial information? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="financial-information" name="financial_information" required>
+									<option value="">Select one</option>
+									<option>Family or friends</option>
+									<option>Financial institution</option>
+									<option>Online or social media</option>
+									<option>Community group</option>
+									<option>I rarely seek information</option>
+								</select>
+								<small class="form-text">Contextual: how you learn about financial topics.</small>
+							</div>
+							<div class="form-group">
+								<label class="form-label" for="future-goal">What is your main financial goal right now? <span class="form-required" aria-label="required">*</span></label>
+								<select class="form-select" id="future-goal" name="future_goal" required>
+									<option value="">Select one</option>
+									<option>Build savings</option>
+									<option>Start or grow a business</option>
+									<option>Manage expenses</option>
+									<option>Access education or training</option>
+									<option>Plan for a major purchase</option>
+								</select>
+								<small class="form-text">Contextual: helps us understand your priorities.</small>
+							</div>
+						</div>
+					</fieldset>
+
+					<!-- Section 8: Review -->
+					<section class="assessment-step review-step" data-step="7" aria-labelledby="review-title" hidden>
+						<div class="step-heading">
+							<span class="step-kicker">08 / Review</span>
+							<h2 id="review-title">Review your answers</h2>
+							<p>Take a moment to check the information below. You can go back and change anything before completing.</p>
+						</div>
+						<div class="review-list" id="review-list"></div>
+					</section>
+
+					<div class="step-actions">
+						<button class="btn btn-ghost" id="previous-button" type="button" hidden>← Previous</button>
+						<button class="btn btn-primary" id="next-button" type="button">Next section <span aria-hidden="true">→</span></button>
+						<button class="btn btn-success" id="complete-button" type="submit" hidden>Complete assessment <span aria-hidden="true">✓</span></button>
+					</div>
+				</form>
+				<section class="completion-state" id="completion-state" aria-labelledby="completion-title" hidden>
+					<div class="completion-icon" aria-hidden="true">✓</div>
+					<p class="eyebrow">Assessment complete</p>
+					<h2 id="completion-title">Thank you for sharing your perspective.</h2>
+					<p id="completion-message">Your assessment has been submitted and your explainable FINPATH prediction is ready.</p>
+					<a class="btn btn-primary" id="prediction-link" href="prediction.html">View your prediction <span aria-hidden="true">→</span></a>
+				</section>
+			</section>
+		</div>
+	</main>
+	<script src="js/config.js"></script>
+	<script src="js/api.js"></script>
+	<script src="js/assessment.js"></script>
+</body>
+</html>
