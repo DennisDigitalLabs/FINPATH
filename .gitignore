@@ -79,3 +79,5 @@ env/
 
 # Generated Test Output
 pytest_results.txt
+
+data/raw/finaccess_2024/2024_Finaccess_Publicdata.dta
