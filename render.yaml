@@ -2,22 +2,20 @@ services:
   - type: web
     name: finpath-backend
     runtime: python
+    plan: free
     rootDir: .
     buildCommand: "pip install --upgrade pip && pip install -r requirements-production.txt"
-    startCommand: "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port 8000"
-    disk:
-      name: finpath-sqlite-data
-      mountPath: /var/lib/render/project/data
-      sizeGB: 1
+    startCommand: "alembic upgrade head && uvicorn backend.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
         value: "false"
       - key: DATABASE_URL
-        value: sqlite:////var/lib/render/project/data/finpath.db
+        value: "sqlite:///./finpath.db"
       - key: SQLITE_DB_PATH
-        value: /var/lib/render/project/data/finpath.db
+        value: "./finpath.db"
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
@@ -32,8 +30,9 @@ services:
         value: v1
 
   - type: web
-    runtime: static
     name: finpath-frontend
+    runtime: static
+    rootDir: .
     staticPublishPath: frontend
     buildCommand: ""
     envVars:
