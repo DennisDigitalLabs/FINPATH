@@ -8,13 +8,13 @@
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 starlette>=0.27.0
-pydantic==2.5.0
+pydantic==2.10.5
 pydantic-settings==2.1.0
 email-validator>=2.0.0
 
 # Database
-sqlalchemy==2.0.23
-psycopg[binary]==3.1.12
+sqlalchemy==2.0.36
+psycopg[binary]==3.2.12
 alembic==1.12.1
 
 # Security & Authentication
@@ -39,7 +39,7 @@ shap>=0.45.0,<1.0
 scipy>=1.10.0  # Required by scikit-learn and xgboost
 
 # HTTP Client & Utilities
-httpx>=0.25.0
+httpx==0.27.2
 python-dotenv==1.0.0
 
 # ===== TESTING & DEVELOPMENT TOOLS =====
