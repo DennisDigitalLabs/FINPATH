@@ -5,9 +5,9 @@
 # DO NOT modify without running full test suite
 
 # Web Framework & Server
-fastapi==0.104.1
+fastapi==0.141.1
 uvicorn[standard]==0.24.0
-starlette>=0.27.0
+starlette==1.3.1
 pydantic==2.10.5
 pydantic-settings==2.1.0
 email-validator>=2.0.0
@@ -18,11 +18,11 @@ psycopg[binary]==3.2.12
 alembic==1.12.1
 
 # Security & Authentication
-python-jose[cryptography]==3.3.0
+python-jose[cryptography]==3.5.0
 passlib[bcrypt]==1.7.4
 bcrypt<5
-python-multipart==0.0.6
-cryptography>=41.0.0
+python-multipart==0.0.32
+cryptography==50.0.1
 
 # Data Processing & Validation
 python-dateutil==2.8.2
@@ -32,15 +32,15 @@ typing-extensions>=4.0.0
 # Model trained with scikit-learn 1.8.0; runtime 1.7.2 produces informational warnings only
 numpy>=1.26,<3.0
 pandas>=2.0.0,<3.0
-scikit-learn>=1.3.0,<2.0
-xgboost>=1.7.0,<3.0
+scikit-learn==1.8.0
+xgboost==3.4.1
 joblib>=1.4.0,<2.0
 shap>=0.45.0,<1.0
 scipy>=1.10.0  # Required by scikit-learn and xgboost
 
 # HTTP Client & Utilities
 httpx==0.27.2
-python-dotenv==1.0.0
+python-dotenv==1.2.3
 
 # ===== TESTING & DEVELOPMENT TOOLS =====
 # Testing

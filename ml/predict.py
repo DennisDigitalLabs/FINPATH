@@ -57,8 +57,9 @@ class FinpathPredictor:
         try:
             from .explain_model import explain
             factors = explain(p, model_dir=self.model_dir)
-        except Exception:
-            pass
+        except Exception as exc:
+            # Explainability is optional; prediction must still succeed if it fails.
+            print(f"Explainability unavailable: {exc}")
         return {'risk_score':risk_score,'risk_category':pred_class,'class_probabilities':probs,
                 'top_contributing_factors':factors[:3],'recommendations':recommendations(p,factors),
                 'model_version':self.metadata.get('model_version','v1')}
