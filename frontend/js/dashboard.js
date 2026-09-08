@@ -2,6 +2,11 @@
 	'use strict';
 
 	var content = document.querySelector('.dashboard-content');
+	content.querySelector('.welcome-band').hidden = true;
+	content.querySelector('.dashboard-notice:not([role="alert"])').hidden = true;
+	content.querySelector('.overview-grid').hidden = true;
+	content.querySelector('.quick-actions').hidden = true;
+	content.querySelectorAll('.dashboard-section').forEach(function (section) { section.hidden = true; });
 	var errorState = document.createElement('div');
 	errorState.className = 'dashboard-notice';
 	errorState.setAttribute('role', 'alert');
@@ -83,6 +88,10 @@
 	}
 
 	function render(data) {
+		content.querySelector('.welcome-band').hidden = false;
+		content.querySelector('.overview-grid').hidden = false;
+		content.querySelector('.quick-actions').hidden = false;
+		content.querySelectorAll('.dashboard-section').forEach(function (section) { section.hidden = false; });
 		var assessment = data.latest_assessment;
 		var prediction = data.latest_prediction;
 		var probability = prediction ? Math.round(Number(prediction.probability) * 100) : null;

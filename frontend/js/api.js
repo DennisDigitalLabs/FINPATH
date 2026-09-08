@@ -2,12 +2,9 @@
 	'use strict';
 
 	var tokenStorageKey = 'finpath_access_token';
-	var apiBaseStorageKey = 'finpath_api_base_url';
-
 	function configuredBaseUrl() {
 		var configured = window.FINPATH_CONFIG && window.FINPATH_CONFIG.API_BASE_URL;
-		var stored = window.localStorage.getItem(apiBaseStorageKey);
-		return String(stored || configured || '').replace(/\/$/, '');
+		return String(configured || '').replace(/\/$/, '');
 	}
 
 	function getToken() {
@@ -81,10 +78,6 @@
 
 	var api = {
 		getBaseUrl: configuredBaseUrl,
-		setBaseUrl: function (url) {
-			if (url) window.localStorage.setItem(apiBaseStorageKey, String(url).replace(/\/$/, ''));
-			else window.localStorage.removeItem(apiBaseStorageKey);
-		},
 		getToken: getToken,
 		clearToken: clearToken,
 		login: function (credentials, remember) {

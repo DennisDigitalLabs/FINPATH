@@ -2,6 +2,9 @@
 	'use strict';
 
 	var content = document.querySelector('.analytics-content');
+	content.querySelector('.analytics-intro').hidden = true;
+	content.querySelector('.demo-notice:not([role="alert"])').hidden = true;
+	content.querySelectorAll('.metric-card, .analytics-panel').forEach(function (panel) { panel.hidden = true; });
 	var errorState = document.createElement('div');
 	errorState.className = 'demo-notice';
 	errorState.setAttribute('role', 'alert');
@@ -55,6 +58,8 @@
 	}
 
 	function render(data) {
+		content.querySelector('.analytics-intro').hidden = false;
+		content.querySelectorAll('.metric-card').forEach(function (card) { card.hidden = false; });
 		var cards = document.querySelectorAll('.metric-card');
 		setMetric(cards[0], 'Total assessments', data.total_assessments);
 		setMetric(cards[1], 'Completed assessments', data.completed_assessments);
@@ -67,6 +72,7 @@
 		document.querySelector('.trend-panel').hidden = true;
 		document.querySelector('.interpretation-panel').hidden = true;
 		document.querySelector('.indicators-panel').hidden = true;
+		document.querySelector('.history-panel').hidden = false;
 		renderDistributionTable(data);
 	}
 

@@ -7,6 +7,8 @@
 	var recommendations = [];
 	var state = {};
 	var errorState = document.getElementById('recommendation-error');
+	document.querySelector('.recommendations-intro').hidden = true;
+	document.querySelector('.summary-section').hidden = true;
 
 	function showError(message) {
 		list.hidden = true;
@@ -138,9 +140,10 @@
 		recommendations = Array.isArray(result) ? result : [];
 		state = recommendations.reduce(function (result, item) { result[item.id] = { completed: false, saved: false, details: false }; return result; }, {});
 		setFilterOptions();
+		document.querySelector('.recommendations-intro').hidden = false;
+		document.querySelector('.summary-section').hidden = false;
 		document.querySelector('.demo-pill').textContent = 'Live recommendations';
 		document.querySelector('.demo-notice').hidden = true;
-		document.getElementById('demo-insight').hidden = true;
 		document.querySelector('.summary-note').textContent = 'From your latest predictions';
 		document.getElementById('list-heading').textContent = 'Your recommendations';
 		render();
