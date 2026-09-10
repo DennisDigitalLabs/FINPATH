@@ -92,7 +92,7 @@ class Settings(BaseSettings):
             Database connection URL
         """
         if self.DATABASE_URL and self.DATABASE_URL != "sqlite:///./finpath.db":
-            return self.DATABASE_URL
+            return self._normalize_database_url(self.DATABASE_URL)
 
         # Check for PostgreSQL environment variables
         db_user = os.getenv("DB_USER")
@@ -102,13 +102,24 @@ class Settings(BaseSettings):
         db_name = os.getenv("DB_NAME")
 
         if all([db_user, db_password, db_host, db_name]):
-            return f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            return self._normalize_database_url(
+                f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+            )
 
         if self.is_production:
             return f"sqlite:///{self.SQLITE_DB_PATH}"
 
         # Default to SQLite in the project root for local development
         return self.DATABASE_URL
+
+    @staticmethod
+    def _normalize_database_url(database_url: str) -> str:
+        """Use psycopg 3 for PostgreSQL while preserving SQLite URLs."""
+        if database_url.startswith("postgres://"):
+            return "postgresql+psycopg://" + database_url[len("postgres://") :]
+        if database_url.startswith("postgresql://"):
+            return "postgresql+psycopg://" + database_url[len("postgresql://") :]
+        return database_url
     
     @property
     def model_directory(self) -> Path:

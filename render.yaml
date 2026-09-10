@@ -12,10 +12,6 @@ services:
         value: production
       - key: DEBUG
         value: "false"
-      - key: DATABASE_URL
-        value: "sqlite:///./finpath.db"
-      - key: SQLITE_DB_PATH
-        value: "./finpath.db"
       - key: SECRET_KEY
         generateValue: true
       - key: ALGORITHM
