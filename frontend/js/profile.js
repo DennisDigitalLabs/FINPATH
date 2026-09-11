@@ -7,9 +7,7 @@
 	content.querySelector('.demo-notice').hidden = true;
 	content.querySelector('.profile-grid').hidden = true;
 	var editPanel = content.querySelector('.edit-panel');
-	var preferencesGrid = content.querySelector('.preferences-grid');
 	if (editPanel) editPanel.remove();
-	if (preferencesGrid) preferencesGrid.remove();
 
 	function showError(message) {
 		status.textContent = message;

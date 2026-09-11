@@ -31,7 +31,7 @@
 			}
 			return (payload && payload.detail) || 'Please check the submitted values.';
 		}
-		if (status === 503) return 'This service is temporarily unavailable. Please try again later.';
+		if (status === 503) return (payload && payload.detail) || 'This service is temporarily unavailable. Please try again later.';
 		if (status >= 500) return 'FINPATH could not complete that request. Please try again later.';
 		return (payload && payload.detail) || 'The request could not be completed.';
 	}
