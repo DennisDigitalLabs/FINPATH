@@ -31,7 +31,7 @@
 			}
 			return (payload && payload.detail) || 'Please check the submitted values.';
 		}
-		if (status === 503) return 'The prediction service is temporarily unavailable. Please try again later.';
+		if (status === 503) return 'This service is temporarily unavailable. Please try again later.';
 		if (status >= 500) return 'FINPATH could not complete that request. Please try again later.';
 		return (payload && payload.detail) || 'The request could not be completed.';
 	}
@@ -87,6 +87,9 @@
 			});
 		},
 		register: function (user) { return post('/api/v1/auth/register', user); },
+		requestPasswordReset: function (email) { return post('/api/v1/auth/forgot-password', { email: email }); },
+		validatePasswordResetToken: function (token) { return post('/api/v1/auth/reset-password/validate', { token: token }); },
+		resetPassword: function (token, password) { return post('/api/v1/auth/reset-password', { token: token, password: password }); },
 		me: function () { return get('/api/v1/auth/me'); },
 		getAuthenticated: get,
 		postAuthenticated: post,
