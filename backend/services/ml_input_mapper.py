@@ -24,12 +24,12 @@ class MLInputMapper:
 	"""
 	Authoritative mapper from assessment data to ML raw input fields.
 	
-	The ML model requires exactly 23 raw input fields with strict encodings.
+	The ML model requires exactly 20 raw input fields with strict encodings.
 	This mapper applies only documented mappings and fails closed on ambiguity.
 	"""
 
 	# === AUTHORITATIVE FIELD DEFINITIONS ===
-	# These 23 fields represent the complete ML contract
+	# These 20 fields represent the complete ML contract
 	MODEL_INPUT_FIELDS = {
 		"Age",                      # 1-6 code from age range
 		"Sex",                      # 1-2 code
@@ -38,8 +38,8 @@ class MLInputMapper:
 		"A21",                      # Marital status 1-4 code
 		"Savings_usage",            # 0 or 1
 		"Loan_usage",               # 0 or 1
-		"loan_formal",              # 0 or 1
-		"loan_informal",            # 0 or 1
+		"Loan_formal",              # 0 or 1
+		"Loan_informal",            # 0 or 1
 		"Digital_credit_usage",     # 0 or 1
 		"loan_app_2",               # 0 or 1
 		"loan_fuliza_2",            # 0 or 1
@@ -390,10 +390,10 @@ class MLInputMapper:
 		result["Loan_usage"] = self.map_binary(
 			assessment_data.get("loan_usage"), "Loan usage"
 		)
-		result["loan_formal"] = self.map_binary(
+		result["Loan_formal"] = self.map_binary(
 			assessment_data.get("loan_formal"), "Formal loan"
 		)
-		result["loan_informal"] = self.map_binary(
+		result["Loan_informal"] = self.map_binary(
 			assessment_data.get("loan_informal"), "Informal loan"
 		)
 		result["Digital_credit_usage"] = self.map_binary(
@@ -457,7 +457,7 @@ class MLInputMapper:
 				result[field] = assessment_data[field]
 
 		# === VALIDATION ===
-		# Ensure all 23 required fields are present
+		# Ensure all required model fields are present
 		missing_fields = self.MODEL_INPUT_FIELDS - set(result.keys())
 		if missing_fields:
 			raise MLInputValidationError(

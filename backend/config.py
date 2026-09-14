@@ -44,6 +44,16 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
+    # Password reset and email delivery configuration
+    FRONTEND_URL: str = "https://finpath.onrender.com"
+    RESET_TOKEN_EXPIRE_MINUTES: int = 30
+    SMTP_HOST: str = ""
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: str = ""
+    SMTP_PASSWORD: str = ""
+    SMTP_FROM_EMAIL: str = ""
+    SMTP_USE_TLS: bool = True
+
     # ML integration configuration. The path may point to the trained model directory
     # or a specific artifact file, depending on deployment needs.
     MODEL_PATH: str | None = None

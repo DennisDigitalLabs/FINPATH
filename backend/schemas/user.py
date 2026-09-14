@@ -88,3 +88,30 @@ class UserResponse(BaseModel):
 class TokenResponse(BaseModel):
 	access_token: str
 	token_type: str = "bearer"
+
+
+class PasswordResetRequest(BaseModel):
+	model_config = ConfigDict(extra="forbid")
+
+	email: EmailStr
+
+
+class PasswordResetToken(BaseModel):
+	model_config = ConfigDict(extra="forbid")
+
+	token: str = Field(min_length=1, max_length=4096)
+
+
+class PasswordResetConfirm(PasswordResetToken):
+	password: str = Field(min_length=8, max_length=128)
+
+	@field_validator("password")
+	@classmethod
+	def validate_password(cls, value: str) -> str:
+		if value != value.strip():
+			raise ValueError("password cannot start or end with whitespace")
+		if not any(character.isalpha() for character in value):
+			raise ValueError("password must contain at least one letter")
+		if not any(character.isdigit() for character in value):
+			raise ValueError("password must contain at least one number")
+		return value
