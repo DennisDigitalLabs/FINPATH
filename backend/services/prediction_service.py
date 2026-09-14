@@ -21,106 +21,16 @@ class MLInputAdapter(Protocol):
 
 
 class AssessmentDataInputAdapter:
-	"""Translate assessment payloads into the exact FINPATH ML feature contract."""
+        """Backward-compatible adapter delegating to the authoritative MLInputMapper."""
 
-	@staticmethod
-	def _coerce_int(value: Any, field_name: str) -> int:
-		if value is None or value == "":
-			raise ValueError(f"Assessment data is missing required field '{field_name}'")
-		try:
-			return int(value)
-		except (TypeError, ValueError) as exc:
-			raise ValueError(f"Assessment field '{field_name}' must be an integer") from exc
+        def __init__(self):
+                self.mapper = MLInputMapper()
 
-	@staticmethod
-	def _coerce_age(value: Any) -> int:
-		if value is None or value == "":
-			raise ValueError("Assessment data is missing required field 'Age'")
-		if isinstance(value, str):
-			text = value.strip().lower()
-			if text in {"18-24", "18 to 24", "18-25"}:
-				return 2
-			if text in {"25-34", "26-35", "25 to 34"}:
-				return 3
-			if text.isdigit():
-				value = int(text)
-			else:
-				raise ValueError("Age must be between 18 and 35 for the FINPATH youth model")
-		age = int(value)
-		if age in (1, 2, 3, 4, 5, 6):
-			return age
-		if 18 <= age <= 25:
-			return 2
-		if 26 <= age <= 35:
-			return 3
-		raise ValueError("Age must be between 18 and 35 for the FINPATH youth model")
-
-	def _normalize_mapping(self, payload: Mapping[str, Any]) -> dict[str, Any]:
-		result: dict[str, Any] = {}
-		for key in payload:
-			if isinstance(key, str):
-				result[key] = payload[key]
-		if "Age" not in result and "age" in result:
-			result["Age"] = result.pop("age")
-		if "Age" not in result and "age_range" in result:
-			result["Age"] = result.pop("age_range")
-		if "Sex" not in result and "gender" in result:
-			result["Sex"] = result.pop("gender")
-		if "county" not in result and "county_code" in result:
-			result["county"] = result.pop("county_code")
-		if "A20" not in result and "education" in result:
-			result["A20"] = result.pop("education")
-		if "A21" not in result and "marital_status" in result:
-			result["A21"] = result.pop("marital_status")
-		if "Digital_credit_usage" not in result and "mobile_loan_usage" in result:
-			result["Digital_credit_usage"] = result.pop("mobile_loan_usage")
-		if "chama_usage" not in result and "has_chama" in result:
-			result["chama_usage"] = result.pop("has_chama")
-		if "loan_app_2" not in result and "loan_app_usage" in result:
-			result["loan_app_2"] = result.pop("loan_app_usage")
-		if "loan_fuliza_2" not in result and "fuliza_usage" in result:
-			result["loan_fuliza_2"] = result.pop("fuliza_usage")
-		if "saving_for_emergencies" not in result and "emergency_savings" in result:
-			result["saving_for_emergencies"] = result.pop("emergency_savings")
-		return result
-
-	def prepare(self, assessment_data: Mapping[str, Any]) -> Mapping[str, Any]:
-		if not isinstance(assessment_data, Mapping):
-			raise ValueError("Assessment data must be a mapping")
-		payload = dict(assessment_data)
-		recognized_keys = {
-			"Age", "age", "age_range", "Sex", "gender", "county", "county_code",
-			"A20", "education", "A21", "marital_status", "Digital_credit_usage",
-			"mobile_loan_usage", "chama_usage", "has_chama", "loan_app_2", "loan_app_usage",
-			"loan_fuliza_2", "fuliza_usage", "saving_for_emergencies", "emergency_savings",
-		}
-		if not any(key in payload for key in recognized_keys):
-			raise ValueError("Assessment data is missing required field 'Age'")
-		payload = self._normalize_mapping(payload)
-		if "Age" in payload:
-			payload["Age"] = self._coerce_age(payload["Age"])
-		elif "age" in payload:
-			payload["Age"] = self._coerce_age(payload["age"])
-		else:
-			raise ValueError("Assessment data is missing required field 'Age'")
-		if "Sex" not in payload and "gender" in payload:
-			payload["Sex"] = self._coerce_int(payload["gender"], "Sex")
-		if "county" not in payload and "county_code" in payload:
-			payload["county"] = self._coerce_int(payload["county_code"], "county")
-		if "A20" not in payload and "education" in payload:
-			payload["A20"] = self._coerce_int(payload["education"], "A20")
-		if "A21" not in payload and "marital_status" in payload:
-			payload["A21"] = self._coerce_int(payload["marital_status"], "A21")
-		if "Sex" in payload:
-			sex_value = payload["Sex"]
-			if isinstance(sex_value, str):
-				lookup = {"male": 1, "female": 2, "m": 1, "f": 2}
-				payload["Sex"] = lookup.get(sex_value.strip().lower(), sex_value)
-			if isinstance(payload["Sex"], str):
-				raise ValueError("Sex must be 1 for Male or 2 for Female")
-		if "county" in payload and isinstance(payload["county"], str) and payload["county"].strip().isdigit():
-			payload["county"] = int(payload["county"])
-		return payload
+        def prepare(self, assessment_data: Mapping[str, Any]) -> Mapping[str, Any]:
+                try:
+                        return self.mapper.map_assessment_data(assessment_data)
+                except MLInputValidationError as exc:
+                        raise ValueError(str(exc)) from exc
 
 
 class MLPredictor(Protocol):

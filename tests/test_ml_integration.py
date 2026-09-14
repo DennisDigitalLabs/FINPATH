@@ -93,41 +93,40 @@ def test_prediction_service_defaults_to_fail_closed_predictor():
 
 def test_assessment_input_adapter_maps_required_finpath_fields_and_rejects_missing_values():
     source = {
-        "age": 25,
-        "gender": 2,
-        "county_code": 47,
+        "age_range": "25-34",
+        "sex": 2,
+        "county": 47,
         "education": 5,
         "marital_status": 1,
-        "has_chama": 0,
-        "Savings_usage": 1,
-        "Loan_usage": 0,
-        "Loan_formal": 0,
-        "Loan_informal": 1,
-        "Digital_credit_usage": 0,
+        "savings_usage": 1,
+        "emergency_savings": 0,
+        "loan_usage": 0,
+        "loan_formal": 0,
+        "loan_informal": 1,
+        "digital_credit_usage": 0,
         "defaulted": 0,
         "loan_app_2": 0,
         "loan_fuliza_2": 0,
         "chama_usage": 0,
         "sacco_use": 3,
         "mobile_money_use": 1,
-        "experienced_shock": 0,
-        "Financial_literacy_index_fnl": 3,
-        "accessto_13k_1month": 0,
         "S7_2": 4,
-        "saving_for_emergencies": 0,
         "CountLivelihood": 1,
+        "financial_literacy_score": 3,
     }
 
     prepared = AssessmentDataInputAdapter().prepare(source)
 
-    assert prepared["Age"] == 2
+    assert prepared["Age"] == 3
     assert prepared["Sex"] == 2
     assert prepared["county"] == 47
     assert prepared["A20"] == 5
     assert prepared["A21"] == 1
     assert prepared["Savings_usage"] == 1
     assert prepared["CountLivelihood"] == 1
+    assert prepared["Financial_literacy_index_fnl"] == 3
 
-    missing = {k: v for k, v in source.items() if k not in {"Age", "age"}}
-    with pytest.raises(ValueError, match="Age"):
+    missing = {k: v for k, v in source.items() if k != "age_range"}
+
+    with pytest.raises(ValueError, match="Age range"):
         AssessmentDataInputAdapter().prepare(missing)
