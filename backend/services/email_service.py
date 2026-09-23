@@ -11,11 +11,11 @@ def send_password_reset_email(recipient: str, reset_url: str) -> None:
 		raise RuntimeError("SMTP password-reset delivery is not configured")
 
 	message = EmailMessage()
-	message["Subject"] = "Reset your FINPATH password"
+	message["Subject"] = "Reset your password"
 	message["From"] = settings.SMTP_FROM_EMAIL
 	message["To"] = recipient
 	message.set_content(
-		"We received a request to reset your FINPATH password.\n\n"
+		"We received a request to reset your password.\n\n"
 		f"Reset your password here: {reset_url}\n\n"
 		"This link expires soon and can be used only once. If you did not request this, you can ignore this email."
 	)

@@ -75,7 +75,7 @@ class PredictionOutputAdapter:
 			return str(model_output["explanation"]).strip()
 		category = str(model_output.get("risk_category") or "predicted risk")
 		probability = PredictionOutputAdapter._probability_from_output(model_output)
-		return f"FINPATH model predicted {category} with a top-class probability of {probability:.2%}."
+		return f"The model predicted {category} with a top-class probability of {probability:.2%}."
 
 	@staticmethod
 	def _build_contributing_factors(model_output: Mapping[str, Any]) -> dict[str, Any] | None:
@@ -240,6 +240,14 @@ class PredictionService:
 			raise LookupError("Assessment not found")
 		if assessment.assessment_status != "completed":
 			raise ValueError("Assessment must be completed before prediction")
+		existing_prediction = (
+			db.query(Prediction)
+			.filter(Prediction.assessment_id == assessment.id)
+			.order_by(Prediction.created_at.desc())
+			.first()
+		)
+		if existing_prediction is not None:
+			return existing_prediction
 
 		if self.input_adapter is not None:
 			try:

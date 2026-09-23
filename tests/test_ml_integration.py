@@ -62,7 +62,7 @@ def test_real_predictor_rejects_unknown_risk_categories():
     del missing_explanation["explanation"]
     result = PredictionOutputAdapter().validate(missing_explanation, assessment_id=7)
     assert result.explanation
-    assert "FINPATH model predicted" in result.explanation
+    assert "The model predicted" in result.explanation
 
 
 def test_output_adapter_rejects_mismatched_validated_result():
@@ -130,3 +130,78 @@ def test_assessment_input_adapter_maps_required_finpath_fields_and_rejects_missi
 
     with pytest.raises(ValueError, match="Age range"):
         AssessmentDataInputAdapter().prepare(missing)
+
+
+def browser_assessment_data(**overrides):
+    data = {
+        "age_range": "18-24",
+        "sex": "Female",
+        "county": "Nairobi City",
+        "education": "Secondary completed",
+        "marital_status": "Single / Never Married",
+        "savings_usage": "Yes",
+        "emergency_savings": "Yes",
+        "loan_usage": "No",
+        "chama_usage": "No",
+        "sacco_use": "No",
+        "mobile_money_use": "No",
+        "CountLivelihood": "1",
+        "financial_literacy_score": "3",
+    }
+    data.update(overrides)
+    return data
+
+
+def test_browser_assessment_values_map_to_trained_contract():
+    adapter = AssessmentDataInputAdapter()
+
+    no_loan = adapter.prepare(browser_assessment_data())
+    assert no_loan["saving_for_emergencies"] == 1
+    assert no_loan["Loan_usage"] == 0
+    assert no_loan["Loan_formal"] == 0
+    assert no_loan["Loan_informal"] == 0
+    assert no_loan["Digital_credit_usage"] == 0
+    assert no_loan["loan_app_2"] == 0
+    assert no_loan["loan_fuliza_2"] == 0
+    assert no_loan["defaulted"] == 0
+    assert no_loan["sacco_use"] == 3
+    assert no_loan["mobile_money_use"] == 3
+    assert no_loan["S7_2"] == 4
+
+    loan_user = adapter.prepare(browser_assessment_data(
+        emergency_savings="No",
+        loan_usage="Yes",
+        loan_formal="Yes",
+        loan_informal="No",
+        digital_credit_usage="Yes",
+        loan_app_2="No",
+        loan_fuliza_2="No",
+        defaulted="No",
+        sacco_use="Regular",
+        mobile_money_use="Occasional",
+        S7_2="A few times a month",
+    ))
+    assert loan_user["saving_for_emergencies"] == 0
+    assert loan_user["Loan_usage"] == 1
+    assert loan_user["Loan_formal"] == 1
+    assert loan_user["Loan_informal"] == 0
+    assert loan_user["Digital_credit_usage"] == 1
+    assert loan_user["loan_app_2"] == 0
+    assert loan_user["loan_fuliza_2"] == 0
+    assert loan_user["defaulted"] == 0
+    assert loan_user["sacco_use"] == 1
+    assert loan_user["mobile_money_use"] == 1
+    assert loan_user["S7_2"] == 3
+
+    assert adapter.prepare(browser_assessment_data(sacco_use="Occasional"))["sacco_use"] == 1
+    assert adapter.prepare(browser_assessment_data(mobile_money_use="Regular", S7_2="Several times a week"))["mobile_money_use"] == 1
+
+    for value in ("35-44", 1, 4, 5, 6):
+        with pytest.raises(ValueError, match="age"):
+            adapter.prepare(browser_assessment_data(age_range=value))
+
+
+def test_browser_emergency_savings_values_are_binary():
+    adapter = AssessmentDataInputAdapter()
+    assert adapter.prepare(browser_assessment_data(emergency_savings="Yes"))["saving_for_emergencies"] == 1
+    assert adapter.prepare(browser_assessment_data(emergency_savings="No"))["saving_for_emergencies"] == 0

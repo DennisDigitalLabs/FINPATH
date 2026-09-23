@@ -61,7 +61,7 @@
 		appendText(header, 'span', 'priority-label priority-' + (item.priority <= 2 ? 'high' : item.priority === 3 ? 'medium' : 'low'), 'Priority ' + String(item.priority));
 		card.appendChild(header);
 		appendText(card, 'h3', '', item.recommendation_text);
-		appendText(card, 'p', 'card-explanation', 'Generated from your FINPATH prediction.');
+		appendText(card, 'p', 'card-explanation', 'Generated from your prediction.');
 		detail.className = 'recommendation-detail';
 		detail.hidden = !itemState.details;
 		appendText(detail, 'div', '', 'Prediction reference: ' + String(item.prediction_id));

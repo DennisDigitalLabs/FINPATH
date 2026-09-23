@@ -57,7 +57,7 @@
 			var detail = document.createElement('p');
 			card.className = 'factor-card';
 			title.textContent = String(item.feature || item.name || item.factor || 'Contributing factor');
-			detail.textContent = item.description ? String(item.description) : (item.value === undefined ? 'Supplied by the FINPATH explainability output.' : 'Model contribution: ' + String(item.value));
+			detail.textContent = item.description ? String(item.description) : (item.value === undefined ? 'Supplied by the model explainability output.' : 'Model contribution: ' + String(item.value));
 			content.appendChild(title);
 			content.appendChild(detail);
 			card.appendChild(content);
@@ -70,17 +70,17 @@
 		var confidence = prediction.confidence === null || prediction.confidence === undefined ? null : percentage(prediction.confidence);
 		var riskLevel = String(prediction.risk_level || '');
 		resultLede.textContent = String(prediction.explanation);
-		document.getElementById('result-heading').textContent = 'Your FINPATH prediction.';
+		document.getElementById('result-heading').textContent = 'Your prediction.';
 		riskBadge.textContent = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1) + ' risk';
 		probabilityValue.textContent = String(probability);
 		scoreMeter.setAttribute('aria-label', 'Model probability ' + probability + ' percent');
 		scoreMeter.querySelector('span').style.width = probability + '%';
 		document.querySelector('.score-label').childNodes[0].textContent = 'Model probability ';
-		document.querySelector('.tooltip-mark').setAttribute('title', 'Probability returned by the FINPATH model.');
-		document.querySelector('.tooltip-mark').setAttribute('aria-label', 'Probability returned by the FINPATH model.');
-		document.querySelector('.score-visual p').textContent = 'Probability returned by the FINPATH model.';
+		document.querySelector('.tooltip-mark').setAttribute('title', 'Probability returned by the model.');
+		document.querySelector('.tooltip-mark').setAttribute('aria-label', 'Probability returned by the model.');
+		document.querySelector('.score-visual p').textContent = 'Probability returned by the model.';
 		confidenceValue.textContent = confidence === null ? 'Not available' : String(confidence) + '%';
-		confidenceDescription.textContent = confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the FINPATH model.';
+		confidenceDescription.textContent = confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the model.';
 		if (confidence !== null) {
 			confidenceTrack.setAttribute('aria-valuenow', String(confidence));
 			confidenceTrack.querySelector('span').style.width = confidence + '%';
@@ -91,7 +91,7 @@
 			confidenceTrack.querySelector('span').style.width = '0%';
 		}
 		modelBadge.textContent = 'Model version ' + String(prediction.model_version);
-		document.querySelector('.factors-section .section-heading > p').textContent = 'These factors were supplied by the FINPATH model.';
+		document.querySelector('.factors-section .section-heading > p').textContent = 'These factors were supplied by the model.';
 		renderFactors(prediction.contributing_factors);
 		if (recommendationsLink) recommendationsLink.href = 'recommendations.html?prediction_id=' + encodeURIComponent(prediction.id);
 		processingState.hidden = true;

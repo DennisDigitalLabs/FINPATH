@@ -88,7 +88,7 @@
 		var probability = prediction ? Math.round(Number(prediction.probability) * 100) : null;
 		var confidence = prediction && prediction.confidence !== null && prediction.confidence !== undefined ? Math.round(Number(prediction.confidence) * 100) : null;
 		setText('#dashboard-title', 'Good morning, ' + String(data.user.full_name).split(' ')[0] + '.');
-		setText('.welcome-band .eyebrow', 'Your FINPATH workspace');
+		setText('.welcome-band .eyebrow', 'Your workspace');
 		setText('.demo-pill', 'Live dashboard');
 		setText('.updated-label', assessment ? 'Updated ' + dateText(assessment.updated_at) : 'No assessments yet');
 		document.querySelectorAll('.dashboard-notice').forEach(function (notice) { if (notice !== errorState) notice.hidden = true; });
@@ -100,7 +100,7 @@
 		document.querySelector('.risk-meter span').style.width = (probability === null ? 0 : probability) + '%';
 		setText('.confidence-card .status-tag', confidence === null ? 'Unavailable' : 'Model output');
 		setText('.confidence-number', confidence === null ? '—' : confidence + '%');
-		setText('.confidence-card p', confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the FINPATH model.');
+		setText('.confidence-card p', confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the model.');
 		document.querySelector('.confidence-meter').setAttribute('aria-label', confidence === null ? 'Model confidence not available' : 'Model confidence ' + confidence + ' percent');
 		document.querySelector('.confidence-meter').setAttribute('aria-valuenow', String(confidence === null ? 0 : confidence));
 		document.querySelector('.confidence-meter span').style.width = (confidence === null ? 0 : confidence) + '%';

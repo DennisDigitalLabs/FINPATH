@@ -11,6 +11,7 @@ from backend.dependencies import get_db
 from backend.main import app
 from backend.schemas.prediction import PredictionCreate
 from backend.routes import prediction as prediction_route
+from backend.services.prediction_service import MLInputMapperAdapter
 
 
 TEST_ENGINE = create_engine(
@@ -170,16 +171,17 @@ def test_injected_ml_predictor_stores_and_retrieves_prediction():
     class TestPredictor:
         def predict(self, assessment_data: dict) -> PredictionCreate:
             assert assessment_data == {"future_feature": 1}
-            return PredictionCreate(
-                assessment_id=assessment_id,
-                risk_level="medium",
-                risk_category="financial_access",
-                probability=0.7,
-                confidence=0.9,
-                explanation="Injected test model output.",
-                contributing_factors={"future_feature": 1},
-                model_version="test-model",
-            )
+            return {
+                "assessment_id": assessment_id,
+                "risk_level": "medium",
+                "risk_category": "financial_access",
+                "probability": 0.7,
+                "confidence": 0.9,
+                "explanation": "Injected test model output.",
+                "contributing_factors": {"future_feature": 1},
+                "model_version": "test-model",
+                "recommendations": ["Review your financial priorities."],
+            }
 
     prediction_route.prediction_service = prediction_route.PredictionService(TestPredictor())
     response = client.post(
@@ -198,12 +200,88 @@ def test_injected_ml_predictor_stores_and_retrieves_prediction():
     assert fetched.status_code == 200
     assert fetched.json()["model_version"] == "test-model"
 
+    retried = client.post(
+        "/api/v1/predictions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_id": assessment_id},
+    )
+    assert retried.status_code == 201
+    assert retried.json()["id"] == prediction_id
+
     listed = client.get(
         f"/api/v1/assessments/{assessment_id}/predictions",
         headers={"Authorization": f"Bearer {token}"},
     )
     assert listed.status_code == 200
     assert len(listed.json()) == 1
+
+    recommendations = client.get(
+        "/api/v1/recommendations",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert recommendations.status_code == 200
+    assert len(recommendations.json()) == 1
+
+
+def test_browser_shaped_assessment_reaches_prediction_and_recommendations():
+    token = register_and_login("browser-flow@example.com")
+    browser_data = {
+        "age_range": "18-24",
+        "sex": "Female",
+        "county": "Nairobi City",
+        "education": "Secondary completed",
+        "marital_status": "Single / Never Married",
+        "savings_usage": "Yes",
+        "emergency_savings": "No",
+        "loan_usage": "No",
+        "chama_usage": "No",
+        "sacco_use": "No",
+        "mobile_money_use": "No",
+        "CountLivelihood": "1",
+        "financial_literacy_score": "3",
+    }
+    created = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_data": browser_data, "assessment_status": "completed"},
+    )
+    assert created.status_code == 201
+    assessment_id = created.json()["id"]
+
+    class BrowserPredictor:
+        def predict(self, model_input: dict) -> dict:
+            assert model_input["Loan_usage"] == 0
+            assert model_input["mobile_money_use"] == 3
+            assert model_input["S7_2"] == 4
+            return {
+                "risk_category": "Moderate Risk",
+                "probability": 0.6,
+                "confidence": 0.8,
+                "explanation": "Browser-shaped assessment output.",
+                "recommendations": ["Review your savings plan."],
+                "model_version": "test-model",
+            }
+
+    prediction_route.prediction_service = prediction_route.PredictionService(
+        BrowserPredictor(), MLInputMapperAdapter()
+    )
+    response = client.post(
+        "/api/v1/predictions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_id": assessment_id},
+    )
+    assert response.status_code == 201
+    prediction_id = response.json()["id"]
+    assert client.get(
+        f"/api/v1/predictions/{prediction_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 200
+    recommendations = client.get(
+        "/api/v1/recommendations",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert recommendations.status_code == 200
+    assert len(recommendations.json()) == 1
 
 
 def test_prediction_endpoints_require_authentication():

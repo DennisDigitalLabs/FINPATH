@@ -74,10 +74,10 @@
 		document.querySelector('.stat-grid').appendChild(extra);
 		document.querySelector('.demo-pill').textContent = 'Live admin data';
 		document.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
-		document.querySelector('.admin-intro p:not(.eyebrow)').textContent = 'Review live FINPATH system totals and distributions from the protected administration service.';
+		document.querySelector('.admin-intro p:not(.eyebrow)').textContent = 'Review live system totals and distributions from the protected administration service.';
 		document.querySelector('.summary-note').textContent = 'Generated ' + new Date(data.generated_at).toLocaleString();
 		document.querySelector('.sidebar-note strong').textContent = 'Live administration';
-		document.querySelector('.sidebar-note small').textContent = 'System data from the protected FINPATH analytics service.';
+		document.querySelector('.sidebar-note small').textContent = 'System data from the protected analytics service.';
 		document.querySelector('.admin-content > .admin-section').hidden = false;
 		renderDistribution('Assessment status distribution', data.assessment_status_distribution);
 		renderDistribution('Risk-level distribution', data.risk_level_distribution);

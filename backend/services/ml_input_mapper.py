@@ -60,9 +60,6 @@ class MLInputMapper:
 	AGE_CODE_MAP = {
 		"18-24": 2,
 		"25-34": 3,
-		"35-44": 4,
-		"45-54": 5,
-		"55 or older": 6,
 		# Legacy aliases
 		"18 to 24": 2,
 		"26 to 35": 3,
@@ -127,34 +124,28 @@ class MLInputMapper:
 		True: 1, False: 0,
 	}
 
-	# SACCO usage to codes - PROVISIONAL
-	# Frontend: No / Occasional / Regular
-	# ML default in predict.py: 3
-	# Assumption: 0=No, 1=Occasional, 2=Regular (if 3-state encoding)
+	# SACCO usage follows the source data's current/former/never encoding.
 	SACCO_USE_CODE_MAP = {
-		"No": 0,
+		"No": 3,
 		"Occasional": 1,
 		"Occasional member or user": 1,
-		"Regular": 2,
-		"Regular member or user": 2,
-		"no": 0,
+		"Regular": 1,
+		"Regular member or user": 1,
+		"no": 3,
 		"occasional": 1,
-		"regular": 2,
+		"regular": 1,
 	}
 
-	# Mobile money usage to codes - PROVISIONAL
-	# Frontend: No / Occasional / Regular
-	# ML default in predict.py: 1
-	# Assumption: 0=No, 1=Occasional, 2=Regular (if 3-state encoding)
+	# Mobile money usage follows the source data's current/former/never encoding.
 	MOBILE_MONEY_USE_CODE_MAP = {
-		"No": 0,
+		"No": 3,
 		"Occasional": 1,
 		"Occasional user": 1,
-		"Regular": 2,
-		"Regular user": 2,
-		"no": 0,
+		"Regular": 1,
+		"Regular user": 1,
+		"no": 3,
 		"occasional": 1,
-		"regular": 2,
+		"regular": 1,
 	}
 
 	# Mobile money transaction frequency (S7_2) - 1-4 ordinal
@@ -193,7 +184,7 @@ class MLInputMapper:
 		"""Convert age range label to ML code (1-6)."""
 		if value is None or value == "":
 			raise MLInputValidationError("Age range is required")
-		if isinstance(value, int) and 1 <= value <= 6:
+		if isinstance(value, int) and value in (2, 3):
 			return value
 		label = str(value).strip()
 		if label in MLInputMapper.AGE_CODE_MAP:
@@ -283,7 +274,7 @@ class MLInputMapper:
 		"""Convert SACCO usage to ML code (0-2 provisional)."""
 		if value is None or value == "":
 			raise MLInputValidationError("SACCO usage is required")
-		if isinstance(value, int) and value in (0, 1, 2, 3):
+		if isinstance(value, int) and value in (1, 2, 3):
 			return value
 		label = str(value).strip()
 		if label in MLInputMapper.SACCO_USE_CODE_MAP:
@@ -298,7 +289,7 @@ class MLInputMapper:
 		"""Convert mobile money usage to ML code (0-2 provisional)."""
 		if value is None or value == "":
 			raise MLInputValidationError("Mobile money usage is required")
-		if isinstance(value, int) and value in (0, 1, 2, 3):
+		if isinstance(value, int) and value in (1, 2, 3):
 			return value
 		label = str(value).strip()
 		if label in MLInputMapper.MOBILE_MONEY_USE_CODE_MAP:
@@ -390,24 +381,16 @@ class MLInputMapper:
 		result["Loan_usage"] = self.map_binary(
 			assessment_data.get("loan_usage"), "Loan usage"
 		)
-		result["Loan_formal"] = self.map_binary(
-			assessment_data.get("loan_formal"), "Formal loan"
-		)
-		result["Loan_informal"] = self.map_binary(
-			assessment_data.get("loan_informal"), "Informal loan"
-		)
-		result["Digital_credit_usage"] = self.map_binary(
-			assessment_data.get("digital_credit_usage"), "Digital credit usage"
-		)
-		result["loan_app_2"] = self.map_binary(
-			assessment_data.get("loan_app_2"), "Loan app usage"
-		)
-		result["loan_fuliza_2"] = self.map_binary(
-			assessment_data.get("loan_fuliza_2"), "Fuliza usage"
-		)
-		result["defaulted"] = self.map_binary(
-			assessment_data.get("defaulted"), "Loan default"
-		)
+		loan_fields = {
+			"Loan_formal": ("loan_formal", "Formal loan"),
+			"Loan_informal": ("loan_informal", "Informal loan"),
+			"Digital_credit_usage": ("digital_credit_usage", "Digital credit usage"),
+			"loan_app_2": ("loan_app_2", "Loan app usage"),
+			"loan_fuliza_2": ("loan_fuliza_2", "Fuliza usage"),
+			"defaulted": ("defaulted", "Loan default"),
+		}
+		for model_field, (source_field, label) in loan_fields.items():
+			result[model_field] = 0 if result["Loan_usage"] == 0 and assessment_data.get(source_field) in (None, "") else self.map_binary(assessment_data.get(source_field), label)
 
 		# === SERVICES & DIGITAL ACCESS ===
 		result["chama_usage"] = self.map_binary(
@@ -417,7 +400,7 @@ class MLInputMapper:
 		result["mobile_money_use"] = self.map_mobile_money_use(
 			assessment_data.get("mobile_money_use")
 		)
-		result["S7_2"] = self.map_s7_2_frequency(assessment_data.get("S7_2"))
+		result["S7_2"] = 4 if result["mobile_money_use"] == 3 and assessment_data.get("S7_2") in (None, "") else self.map_s7_2_frequency(assessment_data.get("S7_2"))
 
 		# === RESILIENCE & KNOWLEDGE ===
 		result["CountLivelihood"] = self.map_count_livelihood(

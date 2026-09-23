@@ -28,7 +28,7 @@
 		rows = rows.concat(Object.keys(data.risk_level_distribution || {}).map(function (key) { return ['Risk level', key, data.risk_level_distribution[key]]; }));
 		panel.querySelector('h2').textContent = 'Live distributions';
 		panel.querySelector('.section-heading .summary-note').textContent = 'From your account';
-		caption.textContent = 'Live FINPATH analytics distributions';
+		caption.textContent = 'Live analytics distributions';
 		body.innerHTML = '';
 		rows.forEach(function (row) {
 			var tr = document.createElement('tr');

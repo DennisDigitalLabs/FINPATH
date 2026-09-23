@@ -35,7 +35,7 @@
 			return (payload && payload.detail) || 'Please check the submitted values.';
 		}
 		if (status === 503) return 'The prediction service is temporarily unavailable. Please try again later.';
-		if (status >= 500) return 'FINPATH could not complete that request. Please try again later.';
+		if (status >= 500) return 'We could not complete that request. Please try again later.';
 		return (payload && payload.detail) || 'The request could not be completed.';
 	}
 
@@ -68,7 +68,7 @@
 			});
 		}).catch(function (error) {
 			if (error && error.name === 'FinpathApiError') throw error;
-			var networkError = new Error('FINPATH could not reach the backend. Check your connection and try again.');
+			var networkError = new Error('We could not reach the service. Check your connection and try again.');
 			networkError.name = 'FinpathNetworkError';
 			throw networkError;
 		});
