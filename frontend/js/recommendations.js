@@ -7,12 +7,12 @@
 	var recommendations = [];
 	var state = {};
 	var errorState = document.getElementById('recommendation-error');
-	document.querySelector('.recommendations-intro').hidden = true;
-	document.querySelector('.summary-section').hidden = true;
 
 	function showError(message) {
 		list.hidden = true;
 		emptyState.hidden = true;
+		document.querySelector('.summary-section').hidden = true;
+		document.querySelector('.insight-panel').hidden = true;
 		errorState.textContent = message;
 		errorState.hidden = false;
 	}
@@ -63,7 +63,7 @@
 		appendText(header, 'span', 'priority-label priority-' + (item.priority <= 2 ? 'high' : item.priority === 3 ? 'medium' : 'low'), 'Priority ' + String(item.priority));
 		card.appendChild(header);
 		appendText(card, 'h3', '', item.recommendation_text);
-		appendText(card, 'p', 'card-explanation', 'Generated from your FINPATH prediction.');
+		appendText(card, 'p', 'card-explanation', 'Generated from your prediction.');
 		detail.className = 'recommendation-detail';
 		detail.hidden = !itemState.details;
 		appendText(detail, 'div', '', 'Prediction reference: ' + String(item.prediction_id));
@@ -76,11 +76,13 @@
 		completeButton.textContent = itemState.completed ? 'Completed' : 'Mark complete';
 		saveButton.className = 'icon-button save-button' + (itemState.saved ? ' is-saved' : '');
 		saveButton.type = 'button';
+		saveButton.hidden = true;
 		saveButton.setAttribute('aria-pressed', String(itemState.saved));
 		saveButton.setAttribute('aria-label', itemState.saved ? 'Remove saved recommendation' : 'Save recommendation');
 		saveButton.textContent = itemState.saved ? '★' : '☆';
 		detailsButton.className = 'details-button';
 		detailsButton.type = 'button';
+		completeButton.hidden = true;
 		detailsButton.setAttribute('aria-expanded', String(itemState.details));
 		detailsButton.textContent = itemState.details ? 'Hide details ↑' : 'View details ↓';
 		actions.appendChild(completeButton);
@@ -131,7 +133,7 @@
 	filter.addEventListener('change', render);
 
 	if (!window.FinpathAPI.getToken()) {
-		window.location.href = 'login.html?next=recommendations.html';
+		window.location.href = '/login?next=/recommendations';
 		return;
 	}
 	window.FinpathAPI.me().then(function () {
@@ -140,15 +142,14 @@
 		recommendations = Array.isArray(result) ? result : [];
 		state = recommendations.reduce(function (result, item) { result[item.id] = { completed: false, saved: false, details: false }; return result; }, {});
 		setFilterOptions();
-		document.querySelector('.recommendations-intro').hidden = false;
-		document.querySelector('.summary-section').hidden = false;
 		document.querySelector('.demo-pill').textContent = 'Live recommendations';
 		document.querySelector('.demo-notice').hidden = true;
+		document.getElementById('demo-insight').hidden = true;
 		document.querySelector('.summary-note').textContent = 'From your latest predictions';
 		document.getElementById('list-heading').textContent = 'Your recommendations';
 		render();
 	}).catch(function (reason) {
-		if (reason && reason.status === 401) { window.location.href = 'login.html?next=recommendations.html'; return; }
+		if (reason && reason.status === 401) { window.location.href = '/login?next=/recommendations'; return; }
 		showError(reason && reason.message ? reason.message : 'We could not load your recommendations. Please try again.');
 	});
 }());

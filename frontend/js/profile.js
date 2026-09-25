@@ -1,37 +1,41 @@
 (function () {
 	'use strict';
 
-	var content = document.querySelector('.profile-content');
+	var form = document.getElementById('profile-form');
 	var status = document.getElementById('profile-status');
-	content.querySelector('.profile-intro').hidden = true;
-	content.querySelector('.demo-notice').hidden = true;
-	content.querySelector('.profile-grid').hidden = true;
-	var editPanel = content.querySelector('.edit-panel');
-	if (editPanel) editPanel.remove();
+	var preferenceStatus = document.getElementById('preference-status');
+	var nameValue = document.querySelector('[data-profile-name]');
+	var emailValue = document.querySelector('[data-profile-email]');
+	var displayName = document.getElementById('display-name');
+	var emailField = document.getElementById('email');
+	var profileNotice = document.querySelector('.demo-notice p');
+	document.querySelectorAll('.preference-group').forEach(function (group) { group.remove(); });
+	if (profileNotice) profileNotice.innerHTML = '<strong>Profile details</strong><br>These details are loaded from your authenticated account.';
 
-	function showError(message) {
-		status.textContent = message;
-		status.className = 'form-status alert-danger';
+	function showAccount(user) {
+		var fullName = String(user.full_name || 'Account holder');
+		var email = String(user.email || '');
+		if (nameValue) nameValue.textContent = fullName;
+		if (emailValue) emailValue.textContent = email;
+		if (displayName) displayName.value = fullName;
+		if (emailField) emailField.value = email;
 	}
 
-	function render(user) {
-		var initials = String(user.full_name || '').split(/\s+/).map(function (part) { return part.charAt(0); }).join('').slice(0, 2).toUpperCase();
-		document.querySelector('.demo-pill').textContent = 'Connected profile';
-		document.querySelector('.avatar').textContent = initials || 'FP';
-		document.getElementById('profile-name').textContent = user.full_name;
-		document.getElementById('profile-email').textContent = user.email;
-		document.getElementById('profile-role').textContent = user.role;
-		document.getElementById('profile-created').textContent = new Date(user.created_at).toLocaleDateString();
-		content.querySelector('.profile-intro').hidden = false;
-		content.querySelector('.profile-grid').hidden = false;
+	if (!window.FinpathAPI || !window.FinpathAPI.getToken()) {
+		window.location.href = '/login?next=/profile';
+		return;
 	}
-
-	if (!window.FinpathAPI.getToken()) {
-		window.location.href = 'login.html?next=profile.html';
-	} else {
-		window.FinpathAPI.me().then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=profile.html'; return; }
-			showError(reason && reason.message ? reason.message : 'We could not load your profile. Please try again.');
+	if (window.FinpathAPI && window.FinpathAPI.getToken()) {
+		window.FinpathAPI.me().then(showAccount).catch(function () {
+			if (status) status.textContent = 'We could not load your account details.';
 		});
 	}
+
+	if (form) {
+		form.addEventListener('submit', function (event) {
+			event.preventDefault();
+			status.textContent = 'Profile details are managed from your account.';
+		});
+	}
+	if (preferenceStatus) preferenceStatus.textContent = 'Preferences are currently read-only.';
 }());

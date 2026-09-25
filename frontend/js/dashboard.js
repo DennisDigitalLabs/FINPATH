@@ -2,11 +2,6 @@
 	'use strict';
 
 	var content = document.querySelector('.dashboard-content');
-	content.querySelector('.welcome-band').hidden = true;
-	content.querySelector('.dashboard-notice:not([role="alert"])').hidden = true;
-	content.querySelector('.overview-grid').hidden = true;
-	content.querySelector('.quick-actions').hidden = true;
-	content.querySelectorAll('.dashboard-section').forEach(function (section) { section.hidden = true; });
 	var errorState = document.createElement('div');
 	errorState.className = 'dashboard-notice';
 	errorState.setAttribute('role', 'alert');
@@ -28,6 +23,7 @@
 		errorState.textContent = message;
 		errorState.hidden = false;
 		content.querySelector('.welcome-band').hidden = true;
+		content.querySelectorAll('.dashboard-notice:not([role="alert"]), .overview-grid, .quick-actions, .lower-grid').forEach(function (section) { section.hidden = true; });
 	}
 
 	function renderRecommendations(items) {
@@ -88,16 +84,12 @@
 	}
 
 	function render(data) {
-		content.querySelector('.welcome-band').hidden = false;
-		content.querySelector('.overview-grid').hidden = false;
-		content.querySelector('.quick-actions').hidden = false;
-		content.querySelectorAll('.dashboard-section').forEach(function (section) { section.hidden = false; });
 		var assessment = data.latest_assessment;
 		var prediction = data.latest_prediction;
 		var probability = prediction ? Math.round(Number(prediction.probability) * 100) : null;
 		var confidence = prediction && prediction.confidence !== null && prediction.confidence !== undefined ? Math.round(Number(prediction.confidence) * 100) : null;
 		setText('#dashboard-title', 'Welcome back, ' + String(data.user.full_name));
-		setText('.welcome-band .eyebrow', 'Your FINPATH workspace');
+		setText('.welcome-band .eyebrow', 'Your workspace');
 		setText('.demo-pill', 'Live dashboard');
 		setText('.updated-label', assessment ? 'Updated ' + dateText(assessment.updated_at) : 'No assessments yet');
 		document.querySelectorAll('.dashboard-notice').forEach(function (notice) { if (notice !== errorState) notice.hidden = true; });
@@ -109,7 +101,7 @@
 		document.querySelector('.risk-meter span').style.width = (probability === null ? 0 : probability) + '%';
 		setText('.confidence-card .status-tag', confidence === null ? 'Unavailable' : 'Model output');
 		setText('.confidence-number', confidence === null ? '—' : confidence + '%');
-		setText('.confidence-card p', confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the FINPATH model.');
+		setText('.confidence-card p', confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the model.');
 		document.querySelector('.confidence-meter').setAttribute('aria-label', confidence === null ? 'Model confidence not available' : 'Model confidence ' + confidence + ' percent');
 		document.querySelector('.confidence-meter').setAttribute('aria-valuenow', String(confidence === null ? 0 : confidence));
 		document.querySelector('.confidence-meter span').style.width = (confidence === null ? 0 : confidence) + '%';
@@ -119,7 +111,7 @@
 		document.querySelector('.status-meter').setAttribute('aria-valuenow', assessment ? '100' : '0');
 		document.querySelector('.status-meter').setAttribute('aria-label', assessment ? 'Assessment status ' + assessment.assessment_status : 'No assessment data available');
 		document.querySelector('.status-meter span').style.width = assessment ? '100%' : '0%';
-		if (prediction) document.querySelector('.action-card[href="prediction.html"]').href = 'prediction.html?prediction_id=' + encodeURIComponent(prediction.id);
+		if (prediction) document.querySelector('.action-card[href="/prediction"]').href = '/prediction?prediction_id=' + encodeURIComponent(prediction.id);
 		renderRecommendations(data.latest_recommendations);
 		renderActivity(data.recent_activity);
 		document.querySelector('.indicators-section').hidden = true;
@@ -131,13 +123,13 @@
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=dashboard.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/dashboard'; return; }
 		window.FinpathAPI.me().then(function () { return window.FinpathAPI.getDashboard(); }).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=dashboard.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/dashboard'; return; }
 			showError(reason && reason.message ? reason.message : 'We could not load your dashboard. Please try again.');
 		});
 	}
 
-	document.getElementById('logout-button').addEventListener('click', function () { window.FinpathAPI.clearToken(); window.location.href = 'login.html'; });
+	document.getElementById('logout-button').addEventListener('click', function () { window.FinpathAPI.clearToken(); window.location.href = '/login'; });
 	load();
 }());

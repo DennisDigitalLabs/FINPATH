@@ -15,6 +15,7 @@
 		errorState.textContent = message;
 		errorState.hidden = false;
 		content.querySelector('.admin-intro').hidden = true;
+		content.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
 		content.querySelectorAll('.admin-section, .admin-notice:not([role="alert"])').forEach(function (section) { section.hidden = true; });
 		document.querySelectorAll('.stat-card').forEach(function (card) { card.hidden = true; });
 	}
@@ -74,17 +75,17 @@
 		document.querySelector('.stat-grid').appendChild(extra);
 		document.querySelector('.demo-pill').textContent = 'Live admin data';
 		document.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
-		document.querySelector('.admin-intro p:not(.eyebrow)').textContent = 'Review live FINPATH system totals and distributions from the protected administration service.';
+		document.querySelector('.admin-intro p:not(.eyebrow)').textContent = 'Review live system totals and distributions from the protected administration service.';
 		document.querySelector('.summary-note').textContent = 'Generated ' + new Date(data.generated_at).toLocaleString();
 		document.querySelector('.sidebar-note strong').textContent = 'Live administration';
-		document.querySelector('.sidebar-note small').textContent = 'System data from the protected FINPATH analytics service.';
+		document.querySelector('.sidebar-note small').textContent = 'System data from the protected analytics service.';
 		document.querySelector('.admin-content > .admin-section').hidden = false;
 		renderDistribution('Assessment status distribution', data.assessment_status_distribution);
 		renderDistribution('Risk-level distribution', data.risk_level_distribution);
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=admin.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/admin'; return; }
 		window.FinpathAPI.me().then(function (user) {
 			if (user.role !== 'admin') {
 				var forbidden = new Error('Administrator access is required to view this page.');
@@ -93,7 +94,7 @@
 			}
 			return window.FinpathAPI.getSystemAnalytics();
 		}).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=admin.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/admin'; return; }
 			showError(reason && reason.status === 403 ? 'Administrator access is required to view this page.' : (reason && reason.message ? reason.message : 'We could not load the admin dashboard. Please try again.'));
 		});
 	}

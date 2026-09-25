@@ -1,6 +1,8 @@
 (function () {
 	'use strict';
 
+	document.querySelectorAll('a[href="#forgot-password"], a[href="#terms"], a[href="#privacy"]').forEach(function (link) { link.remove(); });
+
 	function showError(element, message) {
 		element.textContent = message;
 		element.hidden = false;
@@ -33,8 +35,6 @@
 		var passwordError = document.getElementById('login-password-error');
 		var loginError = document.getElementById('login-error');
 		var status = document.getElementById('login-status');
-		var loginButton = loginForm.querySelector('button[type="submit"]');
-		var loginSubmitting = false;
 
 		function validateEmailField(forceDisplay) {
 			var value = (emailField.value || '').trim();
@@ -68,7 +68,6 @@
 
 		loginForm.addEventListener('submit', function (event) {
 			event.preventDefault();
-			if (loginSubmitting) return;
 			var emailValid = validateEmailField(true);
 			var passwordValid = validatePasswordField(true);
 			if (!emailValid || !passwordValid) {
@@ -76,28 +75,18 @@
 				return;
 			}
 			clearError(loginError);
-			loginSubmitting = true;
-			loginButton.disabled = true;
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
-				.then(function () { window.location.href = 'dashboard.html'; })
-				.catch(function (reason) {
-					loginSubmitting = false;
-					loginButton.disabled = false;
-					status.textContent = '';
-					showError(loginError, reason.message);
-				});
+				.then(function () { window.location.href = '/dashboard'; })
+				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });
 		});
 	}
 
 	var registerForm = document.getElementById('register-form');
 	if (registerForm) {
-		var registerButton = registerForm.querySelector('button[type="submit"]');
-		var registerSubmitting = false;
 		registerForm.addEventListener('submit', function (event) {
 			event.preventDefault();
-			if (registerSubmitting) return;
 			var error = document.getElementById('register-error');
 			var status = document.getElementById('register-status');
 			var data;
@@ -107,18 +96,11 @@
 				return;
 			}
 			clearError(error);
-			registerSubmitting = true;
-			registerButton.disabled = true;
 			status.textContent = 'Creating your account...';
 			data = new FormData(registerForm);
 			window.FinpathAPI.register({ full_name: data.get('full_name'), email: data.get('email'), password: data.get('password') })
-				.then(function () { window.location.href = 'login.html?registered=1'; })
-				.catch(function (reason) {
-					registerSubmitting = false;
-					registerButton.disabled = false;
-					status.textContent = '';
-					showError(error, reason.message);
-				});
+				.then(function () { window.location.href = '/login?registered=1'; })
+				.catch(function (reason) { status.textContent = ''; showError(error, reason.message); });
 		});
 	}
 }());

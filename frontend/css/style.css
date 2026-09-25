@@ -106,6 +106,9 @@ button { cursor: pointer; }
 	margin-inline: auto;
 }
 
+.brand strong { font-size: 0 !important; }
+.brand strong::after { content: "FINPATH"; font-size: 1.2rem; }
+
 .stack > * + * { margin-top: var(--space-md); }
 .muted, .text-muted { color: var(--text-muted); }
 .text-secondary { color: var(--text-secondary); }

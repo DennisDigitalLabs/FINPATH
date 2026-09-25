@@ -2,9 +2,6 @@
 	'use strict';
 
 	var content = document.querySelector('.analytics-content');
-	content.querySelector('.analytics-intro').hidden = true;
-	content.querySelector('.demo-notice:not([role="alert"])').hidden = true;
-	content.querySelectorAll('.metric-card, .analytics-panel').forEach(function (panel) { panel.hidden = true; });
 	var errorState = document.createElement('div');
 	errorState.className = 'demo-notice';
 	errorState.setAttribute('role', 'alert');
@@ -14,6 +11,7 @@
 	function showError(message) {
 		errorState.textContent = message;
 		errorState.hidden = false;
+		document.querySelectorAll('.metric-grid, .trend-panel, .interpretation-panel, .indicators-panel, .history-panel').forEach(function (section) { section.hidden = true; });
 	}
 
 	function setMetric(card, label, value) {
@@ -31,7 +29,7 @@
 		rows = rows.concat(Object.keys(data.risk_level_distribution || {}).map(function (key) { return ['Risk level', key, data.risk_level_distribution[key]]; }));
 		panel.querySelector('h2').textContent = 'Live distributions';
 		panel.querySelector('.section-heading .summary-note').textContent = 'From your account';
-		caption.textContent = 'Live FINPATH analytics distributions';
+		caption.textContent = 'Live analytics distributions';
 		body.innerHTML = '';
 		rows.forEach(function (row) {
 			var tr = document.createElement('tr');
@@ -58,8 +56,6 @@
 	}
 
 	function render(data) {
-		content.querySelector('.analytics-intro').hidden = false;
-		content.querySelectorAll('.metric-card').forEach(function (card) { card.hidden = false; });
 		var cards = document.querySelectorAll('.metric-card');
 		setMetric(cards[0], 'Total assessments', data.total_assessments);
 		setMetric(cards[1], 'Completed assessments', data.completed_assessments);
@@ -72,14 +68,13 @@
 		document.querySelector('.trend-panel').hidden = true;
 		document.querySelector('.interpretation-panel').hidden = true;
 		document.querySelector('.indicators-panel').hidden = true;
-		document.querySelector('.history-panel').hidden = false;
 		renderDistributionTable(data);
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=analytics.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/analytics'; return; }
 		window.FinpathAPI.me().then(function () { return window.FinpathAPI.getAnalytics(); }).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=analytics.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/analytics'; return; }
 			showError(reason && reason.message ? reason.message : 'We could not load your analytics. Please try again.');
 		});
 	}
