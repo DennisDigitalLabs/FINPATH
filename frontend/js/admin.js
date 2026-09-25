@@ -15,6 +15,7 @@
 		errorState.textContent = message;
 		errorState.hidden = false;
 		content.querySelector('.admin-intro').hidden = true;
+		content.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
 		content.querySelectorAll('.admin-section, .admin-notice:not([role="alert"])').forEach(function (section) { section.hidden = true; });
 		document.querySelectorAll('.stat-card').forEach(function (card) { card.hidden = true; });
 	}
@@ -84,7 +85,7 @@
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=admin.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/admin'; return; }
 		window.FinpathAPI.me().then(function (user) {
 			if (user.role !== 'admin') {
 				var forbidden = new Error('Administrator access is required to view this page.');
@@ -93,7 +94,7 @@
 			}
 			return window.FinpathAPI.getSystemAnalytics();
 		}).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=admin.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/admin'; return; }
 			showError(reason && reason.status === 403 ? 'Administrator access is required to view this page.' : (reason && reason.message ? reason.message : 'We could not load the admin dashboard. Please try again.'));
 		});
 	}

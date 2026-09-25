@@ -11,6 +11,8 @@
 	function showError(message) {
 		list.hidden = true;
 		emptyState.hidden = true;
+		document.querySelector('.summary-section').hidden = true;
+		document.querySelector('.insight-panel').hidden = true;
 		errorState.textContent = message;
 		errorState.hidden = false;
 	}
@@ -74,11 +76,13 @@
 		completeButton.textContent = itemState.completed ? 'Completed' : 'Mark complete';
 		saveButton.className = 'icon-button save-button' + (itemState.saved ? ' is-saved' : '');
 		saveButton.type = 'button';
+		saveButton.hidden = true;
 		saveButton.setAttribute('aria-pressed', String(itemState.saved));
 		saveButton.setAttribute('aria-label', itemState.saved ? 'Remove saved recommendation' : 'Save recommendation');
 		saveButton.textContent = itemState.saved ? '★' : '☆';
 		detailsButton.className = 'details-button';
 		detailsButton.type = 'button';
+		completeButton.hidden = true;
 		detailsButton.setAttribute('aria-expanded', String(itemState.details));
 		detailsButton.textContent = itemState.details ? 'Hide details ↑' : 'View details ↓';
 		actions.appendChild(completeButton);
@@ -129,7 +133,7 @@
 	filter.addEventListener('change', render);
 
 	if (!window.FinpathAPI.getToken()) {
-		window.location.href = 'login.html?next=recommendations.html';
+		window.location.href = '/login?next=/recommendations';
 		return;
 	}
 	window.FinpathAPI.me().then(function () {
@@ -145,7 +149,7 @@
 		document.getElementById('list-heading').textContent = 'Your recommendations';
 		render();
 	}).catch(function (reason) {
-		if (reason && reason.status === 401) { window.location.href = 'login.html?next=recommendations.html'; return; }
+		if (reason && reason.status === 401) { window.location.href = '/login?next=/recommendations'; return; }
 		showError(reason && reason.message ? reason.message : 'We could not load your recommendations. Please try again.');
 	});
 }());

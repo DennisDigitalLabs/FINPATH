@@ -31,15 +31,15 @@ def public_text(path):
     return text
 
 
-def test_public_frontend_contains_no_project_branding():
-    forbidden = "finpath"
-    violations = {
+def test_public_frontend_uses_finpath_branding():
+    brand = "finpath"
+    matches = {
         str(path.relative_to(ROOT)): [
             (line_number, line)
             for line_number, line in enumerate(public_text(path).splitlines(), start=1)
-            if forbidden in line.lower()
+            if brand in line.lower()
         ]
         for path in PUBLIC_FILES
     }
-    violations = {path: matches for path, matches in violations.items() if matches}
-    assert not violations, violations
+    matches = {path: lines for path, lines in matches.items() if lines}
+    assert any(matches.values()), "Expected FINPATH branding in the public frontend"

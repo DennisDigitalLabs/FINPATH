@@ -93,7 +93,7 @@
 		modelBadge.textContent = 'Model version ' + String(prediction.model_version);
 		document.querySelector('.factors-section .section-heading > p').textContent = 'These factors were supplied by the model.';
 		renderFactors(prediction.contributing_factors);
-		if (recommendationsLink) recommendationsLink.href = 'recommendations.html?prediction_id=' + encodeURIComponent(prediction.id);
+		if (recommendationsLink) recommendationsLink.href = '/recommendations?prediction_id=' + encodeURIComponent(prediction.id);
 		processingState.hidden = true;
 		resultState.hidden = false;
 		document.getElementById('result-heading').focus();
@@ -111,7 +111,7 @@
 				return predictions[0];
 			});
 		}).then(renderPrediction).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=prediction.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/prediction'; return; }
 			showError(reason && reason.message ? reason.message : 'We could not load your prediction. Please try again.');
 		});
 	}

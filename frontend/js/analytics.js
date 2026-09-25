@@ -11,6 +11,7 @@
 	function showError(message) {
 		errorState.textContent = message;
 		errorState.hidden = false;
+		document.querySelectorAll('.metric-grid, .trend-panel, .interpretation-panel, .indicators-panel, .history-panel').forEach(function (section) { section.hidden = true; });
 	}
 
 	function setMetric(card, label, value) {
@@ -71,9 +72,9 @@
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=analytics.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/analytics'; return; }
 		window.FinpathAPI.me().then(function () { return window.FinpathAPI.getAnalytics(); }).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=analytics.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/analytics'; return; }
 			showError(reason && reason.message ? reason.message : 'We could not load your analytics. Please try again.');
 		});
 	}

@@ -1,6 +1,8 @@
 (function () {
 	'use strict';
 
+	document.querySelectorAll('a[href="#forgot-password"], a[href="#terms"], a[href="#privacy"]').forEach(function (link) { link.remove(); });
+
 	function showError(element, message) {
 		element.textContent = message;
 		element.hidden = false;
@@ -76,7 +78,7 @@
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
-				.then(function () { window.location.href = 'dashboard.html'; })
+				.then(function () { window.location.href = '/dashboard'; })
 				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });
 		});
 	}
@@ -97,7 +99,7 @@
 			status.textContent = 'Creating your account...';
 			data = new FormData(registerForm);
 			window.FinpathAPI.register({ full_name: data.get('full_name'), email: data.get('email'), password: data.get('password') })
-				.then(function () { window.location.href = 'login.html?registered=1'; })
+				.then(function () { window.location.href = '/login?registered=1'; })
 				.catch(function (reason) { status.textContent = ''; showError(error, reason.message); });
 		});
 	}

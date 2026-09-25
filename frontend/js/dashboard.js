@@ -23,6 +23,7 @@
 		errorState.textContent = message;
 		errorState.hidden = false;
 		content.querySelector('.welcome-band').hidden = true;
+		content.querySelectorAll('.dashboard-notice:not([role="alert"]), .overview-grid, .quick-actions, .lower-grid').forEach(function (section) { section.hidden = true; });
 	}
 
 	function renderRecommendations(items) {
@@ -110,7 +111,7 @@
 		document.querySelector('.status-meter').setAttribute('aria-valuenow', assessment ? '100' : '0');
 		document.querySelector('.status-meter').setAttribute('aria-label', assessment ? 'Assessment status ' + assessment.assessment_status : 'No assessment data available');
 		document.querySelector('.status-meter span').style.width = assessment ? '100%' : '0%';
-		if (prediction) document.querySelector('.action-card[href="prediction.html"]').href = 'prediction.html?prediction_id=' + encodeURIComponent(prediction.id);
+		if (prediction) document.querySelector('.action-card[href="/prediction"]').href = '/prediction?prediction_id=' + encodeURIComponent(prediction.id);
 		renderRecommendations(data.latest_recommendations);
 		renderActivity(data.recent_activity);
 		document.querySelector('.indicators-section').hidden = true;
@@ -122,13 +123,13 @@
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = 'login.html?next=dashboard.html'; return; }
+		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/dashboard'; return; }
 		window.FinpathAPI.me().then(function () { return window.FinpathAPI.getDashboard(); }).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = 'login.html?next=dashboard.html'; return; }
+			if (reason && reason.status === 401) { window.location.href = '/login?next=/dashboard'; return; }
 			showError(reason && reason.message ? reason.message : 'We could not load your dashboard. Please try again.');
 		});
 	}
 
-	document.getElementById('logout-button').addEventListener('click', function () { window.FinpathAPI.clearToken(); window.location.href = 'login.html'; });
+	document.getElementById('logout-button').addEventListener('click', function () { window.FinpathAPI.clearToken(); window.location.href = '/login'; });
 	load();
 }());

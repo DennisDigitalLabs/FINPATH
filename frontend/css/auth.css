@@ -6,6 +6,8 @@
 .auth-brand { position: relative; z-index: 1; display: inline-flex; align-items: center; gap: 0.625rem; align-self: flex-start; color: #fff; text-decoration: none; }
 .auth-brand:hover { color: #fff; }
 .auth-brand strong { display: block; font-family: var(--font-display); font-size: 1.65rem; letter-spacing: 0.03em; line-height: 1; }
+.auth-brand strong { font-size: 0 !important; }
+.auth-brand strong::after { content: "FINPATH"; font-size: 1.65rem; }
 .auth-brand small { display: block; margin-top: 0.25rem; color: #b9cac5; font-size: 0.58rem; line-height: 1; }
 .auth-brand-mark { position: relative; display: inline-block; width: 2.8rem; height: 3.1rem; }
 .auth-brand-mark::before { position: absolute; bottom: 0.1rem; left: 1.15rem; width: 0.42rem; height: 2.2rem; border-radius: 1rem; background: #fff; content: ""; transform: rotate(23deg); }
