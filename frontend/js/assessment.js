@@ -122,17 +122,17 @@
 
 	function redirectToLogin() {
 		showMessage('Please sign in before starting an assessment. Redirecting you to login.', true);
-		window.setTimeout(function () { window.location.href = 'login.html?next=assessment.html'; }, 900);
+		window.setTimeout(function () { window.location.href = '/login?next=/assessment'; }, 900);
 	}
 
 	function formDataObject() {
 		var data = {};
-		Array.prototype.forEach.call(new FormData(form).entries(), function (entry) {
+		for (const entry of new FormData(form).entries()) {
 			// Skip empty values and hidden field group values
 			if (entry[1] !== '' && !entry[0].startsWith('_hidden_')) {
 				data[entry[0]] = entry[1];
 			}
-		});
+		}
 		return data;
 	}
 
@@ -159,7 +159,7 @@
 				validationSummary.hidden = true;
 				completionTitle.focus();
 				completionMessage.textContent = 'Your assessment and explainable prediction are ready.';
-				predictionLink.href = 'prediction.html?assessment_id=' + encodeURIComponent(result.assessment.id) + '&prediction_id=' + encodeURIComponent(result.prediction.id);
+				predictionLink.href = '/prediction?assessment_id=' + encodeURIComponent(result.assessment.id) + '&prediction_id=' + encodeURIComponent(result.prediction.id);
 				completionState.hidden = false;
 				completionState.focus();
 				window.scrollTo({ top: 0, behavior: 'smooth' });
