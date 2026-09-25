@@ -1,0 +1,25 @@
+.admin-pill {
+	flex: 0 0 auto;
+	border: 1px solid #a8ddc4;
+	background: var(--success-bg);
+	padding: 0.45rem 0.7rem;
+	color: var(--success);
+	font-size: var(--text-xs);
+	font-weight: 700;
+}
+
+.admin-empty-state {
+	border-style: dashed;
+}
+
+.admin-empty-copy {
+	margin: 0;
+	color: var(--text-secondary);
+	font-size: var(--text-sm);
+}
+
+@media (max-width: 30rem) {
+	.admin-pill {
+		align-self: flex-start;
+	}
+}
