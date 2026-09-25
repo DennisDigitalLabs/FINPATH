@@ -87,7 +87,7 @@
 		var prediction = data.latest_prediction;
 		var probability = prediction ? Math.round(Number(prediction.probability) * 100) : null;
 		var confidence = prediction && prediction.confidence !== null && prediction.confidence !== undefined ? Math.round(Number(prediction.confidence) * 100) : null;
-		setText('#dashboard-title', 'Good morning, ' + String(data.user.full_name).split(' ')[0] + '.');
+		setText('#dashboard-title', 'Welcome back, ' + String(data.user.full_name));
 		setText('.welcome-band .eyebrow', 'Your workspace');
 		setText('.demo-pill', 'Live dashboard');
 		setText('.updated-label', assessment ? 'Updated ' + dateText(assessment.updated_at) : 'No assessments yet');
