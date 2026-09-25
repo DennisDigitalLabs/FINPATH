@@ -45,10 +45,12 @@
 .hero-note { display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-xl); color: #b9cac5; font-size: var(--text-xs); }
 .secure-dot { display: grid; width: 1.25rem; height: 1.25rem; place-items: center; border-radius: 50%; background: var(--primary); color: #fff; font-weight: 700; }
 .hero-visual { position: relative; min-height: 34rem; }
+.hero-image { position: absolute; inset: 8% 2% 5% 8%; width: 90%; height: 87%; border: 1px solid rgba(255, 255, 255, 0.28); border-radius: 1.5rem; object-fit: cover; object-position: center 42%; opacity: 0.72; box-shadow: var(--shadow-lg); }
+.hero-visual::after { position: absolute; inset: 8% 2% 5% 8%; border-radius: 1.5rem; background: linear-gradient(135deg, rgba(16, 42, 67, 0.68), rgba(8, 127, 91, 0.16) 55%, rgba(16, 42, 67, 0.38)); content: ""; pointer-events: none; }
 .visual-orbit { position: absolute; border: 1px solid rgba(56, 201, 139, 0.28); border-radius: 50%; }
 .orbit-one { top: 6%; left: 3%; width: 88%; aspect-ratio: 1; }
 .orbit-two { top: 19%; left: 17%; width: 62%; aspect-ratio: 1; border-color: rgba(255, 255, 255, 0.12); }
-.insight-card { position: absolute; top: 15%; left: 18%; width: min(25rem, 68%); padding: var(--space-lg); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: var(--radius-xl); background: linear-gradient(145deg, #f8fcfb, #d9f7ed); color: var(--secondary); box-shadow: var(--shadow-lg); transform: rotate(-4deg); }
+.insight-card { position: absolute; z-index: 1; top: 15%; left: 18%; width: min(25rem, 68%); padding: var(--space-lg); border: 1px solid rgba(255, 255, 255, 0.45); border-radius: var(--radius-xl); background: linear-gradient(145deg, #f8fcfb, #d9f7ed); color: var(--secondary); box-shadow: var(--shadow-lg); transform: rotate(-4deg); }
 .insight-topline { display: flex; align-items: center; gap: var(--space-sm); color: var(--text-secondary); font-size: var(--text-xs); font-weight: 700; text-transform: uppercase; }
 .signal-icon { color: var(--primary); font-size: 1.2rem; }
 .status-pip { width: 0.5rem; height: 0.5rem; margin-left: auto; border-radius: 50%; background: var(--success); }
@@ -59,11 +61,11 @@
 .insight-bars span:nth-child(2n) { background: var(--secondary); opacity: 0.72; }
 .insight-footer { display: flex; justify-content: space-between; gap: var(--space-md); margin-top: var(--space-md); color: var(--text-muted); font-size: var(--text-xs); }
 .insight-footer strong { color: var(--primary-dark); }
-.floating-chip { position: absolute; display: flex; align-items: center; gap: var(--space-sm); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; background: rgba(255, 255, 255, 0.1); padding: 0.625rem 0.875rem; color: #fff; font-size: var(--text-xs); font-weight: 700; backdrop-filter: blur(6px); }
+.floating-chip { position: absolute; z-index: 1; display: flex; align-items: center; gap: var(--space-sm); border: 1px solid rgba(255, 255, 255, 0.3); border-radius: 999px; background: rgba(255, 255, 255, 0.1); padding: 0.625rem 0.875rem; color: #fff; font-size: var(--text-xs); font-weight: 700; backdrop-filter: blur(6px); }
 .floating-chip span { color: #68d6af; font-size: 1rem; }
 .chip-secure { top: 9%; right: 3%; }
 .chip-youth { right: 5%; bottom: 18%; }
-.visual-caption { position: absolute; bottom: 4%; left: 9%; display: flex; align-items: center; gap: var(--space-sm); color: #dce8e5; font-size: var(--text-sm); }
+.visual-caption { position: absolute; z-index: 1; bottom: 4%; left: 9%; display: flex; align-items: center; gap: var(--space-sm); color: #dce8e5; font-size: var(--text-sm); }
 .visual-caption strong { color: #68d6af; font-size: var(--text-lg); }
 .caption-line { width: 2rem; height: 1px; background: #68d6af; }
 
@@ -178,8 +180,12 @@
   .hero-lede { font-size: var(--text-md); }
   .hero-actions { align-items: stretch; flex-direction: column; gap: var(--space-md); }
   .hero-actions .btn { width: 100%; }
+  .cta-inner { align-items: stretch; flex-direction: column; }
+  .cta-actions { align-items: stretch; flex-direction: column; }
+  .cta-actions .btn { width: 100%; }
   .hero-visual { min-height: 22rem; }
   .insight-card { top: 13%; left: 8%; width: 80%; padding: var(--space-md); }
+  .hero-image, .hero-visual::after { inset: 7% 0 5% 0; width: 100%; height: 88%; }
   .insight-number { margin-top: var(--space-lg); font-size: 1.15rem; }
   .insight-number strong { font-size: 1.9rem; }
   .insight-bars { height: 5rem; }
