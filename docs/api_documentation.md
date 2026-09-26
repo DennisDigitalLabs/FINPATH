@@ -27,6 +27,12 @@ When the FastAPI application is running, interactive API documentation is availa
 
 Provides user registration, authentication, and authorization.
 
+- `POST /api/v1/auth/register` creates a normal user; client-supplied role fields are rejected.
+- `POST /api/v1/auth/login` authenticates active users, including administrators.
+- `POST /api/v1/auth/admins` creates an active administrator and requires an active administrator bearer token. The body accepts `full_name`, `email`, and `password`; it does not accept a role. It returns `201` on success, `401` for missing/invalid credentials, `403` for a normal user, and `409` for a duplicate email or active-admin limit.
+
+The initial administrator is created by a trusted operator after migrations are applied: run `python -m backend.create_admin` in an environment configured for the target database. The command prompts for the password and only creates an account when no active administrator exists.
+
 ### Assessments
 
 Supports:

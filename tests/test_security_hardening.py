@@ -59,6 +59,15 @@ def test_production_rejects_debug_and_wildcard_cors():
         )
 
 
+def test_example_secret_key_placeholder_is_rejected():
+    with pytest.raises(ValidationError):
+        Settings(
+            ENVIRONMENT="testing",
+            DEBUG=False,
+            SECRET_KEY="replace-with-a-random-secret-at-least-32-characters",
+        )
+
+
 def test_malformed_stored_password_hash_fails_closed():
     assert verify_password("password", "not-a-valid-password-hash") is False
 

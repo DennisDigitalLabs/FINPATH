@@ -284,14 +284,14 @@ Render startCommand: alembic upgrade head && uvicorn backend.main:app ...
 #### Admin Authorization: ✅ VERIFIED
 
 **Backend Implementation:**
-- Admin role stored in User.is_admin boolean field
+- Admin role stored in `User.role` (`user` or `admin`)
 - `get_current_admin()` dependency rejects non-admin users with 403
 - Test: `test_admin_dependency_rejects_users_and_accepts_admins` PASSES
 
 **Admin Endpoints Protected:**
-- `/analytics/system` (admin-only system-wide analytics)
-- `/users/` (admin user management)
-- All admin routes require is_admin=True
+- `GET /api/v1/analytics/system` (admin-only system-wide analytics)
+- `POST /api/v1/auth/admins` (create an admin; requires an active admin)
+- Both routes authorize against the current database user through `get_current_admin()`
 
 **Test Results:**
 ```
@@ -375,13 +375,13 @@ Frontend Display: Mapped from database enum
 1. **Registration:**
    - POST /auth/register with email, password
    - ✅ Password hashed with bcrypt
-   - ✅ User stored in database with is_admin=false
+   - ✅ User stored in database with role=`user`
    - ✅ Test: `test_valid_registration_hashes_password_and_returns_safe_profile`
 
 2. **Login:**
    - POST /auth/login with email, password
    - ✅ JWT token returned
-   - ✅ Token contains user_id only
+   - ✅ Token contains the subject and role claims with issue/expiry timestamps
    - ✅ 30-minute expiration
    - ✅ Test: `test_login_success_and_auth_me`
 
@@ -573,10 +573,10 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 **4. First Admin User Creation:**
    ```bash
-   # Via API after deployment:
-   POST /auth/register with user data
-   # Then manually set is_admin=true in PostgreSQL for first user
-   # Alternatively: Add admin setup endpoint (optional)
+   # Run after migrations in an environment configured for the deployment database:
+   python -m backend.create_admin
+   # Additional admins are created by an active administrator through:
+   POST /api/v1/auth/admins
    ```
 
 ### Deployment Checklist
@@ -644,9 +644,9 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
    ```
 
 7. **Create First Admin User:**
-   - Use frontend to register (POST /auth/register)
-   - SSH to Render or use pgAdmin to set is_admin=true
-   - Admin can then manage other users via API
+   - Run `python -m backend.create_admin` with the deployment's database configuration after migrations complete.
+   - The command prompts for credentials and creates only the initial active admin.
+   - An active admin can create the second account through `POST /api/v1/auth/admins`.
 
 ---
 

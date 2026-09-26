@@ -32,6 +32,10 @@ class UserCreate(BaseModel):
 		return value
 
 
+class AdminCreate(UserCreate):
+	"""Validated account fields for trusted admin provisioning."""
+
+
 class UserUpdate(BaseModel):
 	"""Optional user-editable account fields."""
 

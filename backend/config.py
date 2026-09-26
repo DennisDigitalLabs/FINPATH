@@ -65,7 +65,10 @@ class Settings(BaseSettings):
     @field_validator("SECRET_KEY")
     @classmethod
     def validate_secret_key(cls, value: str) -> str:
-        if not value or value == "your-secret-key-change-in-production":
+        if not value or value in {
+            "your-secret-key-change-in-production",
+            "replace-with-a-random-secret-at-least-32-characters",
+        }:
             raise ValueError("SECRET_KEY must be configured through the environment")
         if len(value) < 32:
             raise ValueError("SECRET_KEY must contain at least 32 characters")

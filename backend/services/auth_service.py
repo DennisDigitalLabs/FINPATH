@@ -3,11 +3,12 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.config import get_settings
 from backend.models import User
-from backend.schemas.user import UserCreate, UserLogin
+from backend.schemas.user import AdminCreate, UserCreate, UserLogin
 from backend.security import create_access_token, hash_password, verify_password
 
 
@@ -32,6 +33,39 @@ def register_user(db: Session, user_data: UserCreate) -> User:
 	)
 	db.add(user)
 	db.commit()
+	db.refresh(user)
+	return user
+
+
+def count_admin_users(db: Session) -> int:
+	return db.query(User).filter(User.role == "admin", User.is_active.is_(True)).count()
+
+
+def create_admin_user(db: Session, admin_data: AdminCreate) -> User:
+	email = normalize_email(str(admin_data.email))
+	if get_user_by_email(db, email) is not None:
+		raise ValueError("An account with this email already exists")
+	if count_admin_users(db) >= 2:
+		raise ValueError("Maximum of 2 active admin accounts reached")
+
+	user = User(
+		full_name=admin_data.full_name,
+		email=email,
+		hashed_password=hash_password(admin_data.password),
+		role="admin",
+		is_active=True,
+	)
+	db.add(user)
+	try:
+		db.commit()
+	except DBAPIError as exc:
+		db.rollback()
+		message = str(exc.orig).lower()
+		if "maximum of two active admin accounts exceeded" in message:
+			raise ValueError("Maximum of 2 active admin accounts reached") from exc
+		if isinstance(exc, IntegrityError):
+			raise ValueError("An account with this email already exists") from exc
+		raise
 	db.refresh(user)
 	return user
 

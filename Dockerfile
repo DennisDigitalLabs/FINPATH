@@ -32,4 +32,4 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
 
 # Keep startup lightweight: each worker loads the trained model into memory.
 # Using two workers balances concurrency and memory overhead for this ML workload.
-CMD ["uvicorn", "backend.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "2"]
+CMD ["sh", "-c", "alembic upgrade head && exec uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 2"]

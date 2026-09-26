@@ -26,6 +26,14 @@
 - Secrets must be supplied through environment configuration. `.env` is ignored by Git; `.env.example` contains placeholders only.
 - ML artifact paths come from trusted configuration, are local-file validated, and cannot be supplied by API clients. The default predictor fails closed with `503` when unavailable.
 
+### Administrator account lifecycle
+
+- After applying database migrations, an operator creates the initial administrator with `python -m backend.create_admin`, using the same deployment database configuration as the API. The command prompts for credentials and only runs while there are zero active administrators.
+- An active administrator creates the second administrator with `POST /api/v1/auth/admins` and a bearer token. Public registration remains user-only.
+- The API checks the active-admin count for a clear conflict response; the Alembic database trigger is authoritative for concurrent writes. Do not provision admins by manually editing the role column.
+- Render and the Docker image run Alembic before starting Uvicorn. A deployment must also provide a persistent PostgreSQL `DATABASE_URL`; the checked-in Render blueprint does not provision or attach a database itself.
+- The local Compose PostgreSQL and pgAdmin ports bind only to loopback and require operator-supplied passwords; do not reuse production credentials for local development.
+
 ### Dependencies and reporting
 
 Authentication dependencies are pinned in the requirements files, including `bcrypt<5` for compatibility with Passlib 1.7.4. The current test environment emits a Starlette/httpx deprecation warning from Starlette's TestClient integration recommending `httpx2`; tests remain functional. No upgrade was made because the repository's declared FastAPI/Starlette/httpx pins require a compatibility decision as a group, not a blind single-package upgrade.
