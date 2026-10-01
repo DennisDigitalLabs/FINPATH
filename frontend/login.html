@@ -19,16 +19,25 @@
 		</section>
 		<section class="auth-form-panel" aria-labelledby="login-title">
 			<div class="auth-card">
-				<div class="auth-card-heading"><p class="eyebrow">Your account</p><h2 id="login-title">Welcome Back</h2><p>Sign in to continue to your account.</p></div>
+				<div class="auth-card-heading"><p class="eyebrow">FINPATH account</p><h2 id="login-title">Welcome Back</h2><p id="auth-heading-description">Sign in to continue to your FINPATH account.</p></div>
 				<div class="auth-message auth-message-error" id="login-error" role="alert" hidden></div>
 				<form id="auth-form" class="auth-form" action="#" method="post" novalidate>
 					<div class="form-group"><label class="form-label" for="login-email">Email address</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">@</span><input class="form-control" id="login-email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required aria-invalid="false" aria-describedby="login-email-error"><span class="field-status" aria-hidden="true"></span></div><span class="form-error" id="login-email-error" hidden>Enter a valid email address.</span></div>
 					<div class="form-group"><label class="form-label" for="login-password">Password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control password-input" id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required aria-invalid="false" aria-describedby="login-password-error"><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Show password" aria-pressed="false">Show</button></div><span class="form-error" id="login-password-error" hidden>Enter your password.</span></div>
-					<div class="auth-options"><label class="form-check"><input type="checkbox" name="remember" autocomplete="off"><span>Remember me</span></label><a href="#forgot-password" class="auth-small-link">Forgot password?</a></div>
+					<div class="auth-options"><label class="form-check"><input type="checkbox" name="remember" autocomplete="off"><span>Remember me</span></label><a href="#forgot-password" class="auth-small-link" id="forgot-password-link">Forgot password?</a></div>
 					<button class="btn btn-primary btn-lg btn-block" type="submit">Sign In <span aria-hidden="true">→</span></button>
 					<p class="auth-form-status" id="login-status" role="status" aria-live="polite"></p>
 				</form>
 				<p class="auth-switch">Don't have an account? <a href="/register">Create an account</a></p>
+				<section id="forgot-password-view" aria-labelledby="forgot-password-title" hidden>
+					<h3 class="sr-only" id="forgot-password-title">Forgot password</h3>
+					<form id="forgot-password-form" class="auth-form" action="#" method="post" novalidate>
+						<div class="form-group"><label class="form-label" for="forgot-password-email">Email address</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">@</span><input class="form-control" id="forgot-password-email" name="email" type="email" autocomplete="email" placeholder="Enter your account email" required></div></div>
+						<button class="btn btn-primary btn-lg btn-block" id="forgot-password-submit" type="submit">Send Reset Link</button>
+						<p class="auth-form-status" id="forgot-password-status" role="status" aria-live="polite"></p>
+					</form>
+					<p class="auth-switch"><a href="#login" id="forgot-password-back">Back to sign in</a></p>
+				</section>
 			</div>
 		</section>
 	</main>

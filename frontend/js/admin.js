@@ -2,6 +2,10 @@
 	'use strict';
 
 	var content = document.querySelector('.admin-content');
+	var adminCreateSection = document.getElementById('admin-create-section');
+	var adminCreateForm = document.getElementById('admin-create-form');
+	var adminCreateStatus = document.getElementById('admin-create-status');
+	var adminCreateSubmit = document.getElementById('admin-create-submit');
 	var errorState = document.createElement('div');
 	errorState.className = 'admin-notice live-admin-state';
 	errorState.setAttribute('role', 'status');
@@ -16,73 +20,113 @@
 		errorState.hidden = false;
 		content.querySelector('.admin-intro').hidden = true;
 		content.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
-		content.querySelectorAll('.admin-section, .admin-notice:not([role="alert"])').forEach(function (section) { section.hidden = true; });
+		content.querySelectorAll('.admin-section:not(#admin-create-section), .admin-notice:not([role="alert"])').forEach(function (section) { section.hidden = true; });
 		document.querySelectorAll('.stat-card').forEach(function (card) { card.hidden = true; });
 	}
 
-	function setStat(index, label, value, detail) {
-		var card = document.querySelectorAll('.stat-card')[index];
-		card.querySelector('span').textContent = label;
-		card.querySelector('strong').textContent = String(value);
-		card.querySelector('small').textContent = detail;
+	function adminCreateError(reason) {
+		if (reason && reason.status === 401) return 'Your session has expired. Please log in again.';
+		if (reason && reason.status === 403) return 'Administrator access is required.';
+		if (reason && reason.status === 409) return 'An active administrator with this email already exists or the maximum number of active administrators has been reached.';
+		if (reason && reason.status === 422) return 'Please check the account details and try again.';
+		return reason && reason.message ? reason.message : 'We could not create the administrator account. Please try again.';
 	}
 
-	function renderDistribution(title, values) {
-		var section = document.createElement('section');
-		section.className = 'admin-section live-distribution';
-		var heading = document.createElement('div');
-		heading.className = 'section-heading';
-		var headingText = document.createElement('div');
-		var eyebrow = document.createElement('p');
-		var h2 = document.createElement('h2');
-		eyebrow.className = 'eyebrow';
-		eyebrow.textContent = 'Live system data';
-		h2.textContent = title;
-		headingText.appendChild(eyebrow);
-		headingText.appendChild(h2);
-		heading.appendChild(headingText);
-		section.appendChild(heading);
+	adminCreateForm.addEventListener('submit', function (event) {
+		event.preventDefault();
+		if (!adminCreateForm.checkValidity()) {
+			adminCreateForm.reportValidity();
+			return;
+		}
+
+		var fullName = document.getElementById('admin-create-name').value.trim();
+		var email = document.getElementById('admin-create-email').value.trim();
+		var password = document.getElementById('admin-create-password').value;
+		var confirmation = document.getElementById('admin-create-confirm-password').value;
+		if (!fullName) {
+			adminCreateStatus.textContent = 'Enter the administrator\'s full name.';
+			return;
+		}
+		if (password.length < 8 || password.length > 128 || password !== password.trim() || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+			adminCreateStatus.textContent = 'Use a password of 8 to 128 characters, with a letter and a number and no surrounding spaces.';
+			return;
+		}
+		if (password !== confirmation) {
+			adminCreateStatus.textContent = 'The passwords do not match.';
+			return;
+		}
+
+		adminCreateStatus.textContent = 'Creating administrator account...';
+		adminCreateSubmit.disabled = true;
+		window.FinpathAPI.postAuthenticated('/api/v1/auth/admins', {
+			full_name: fullName,
+			email: email,
+			password: password
+		}).then(function () {
+			adminCreateForm.reset();
+			adminCreateStatus.textContent = 'Administrator account created successfully.';
+		}).catch(function (reason) {
+			adminCreateStatus.textContent = adminCreateError(reason);
+		}).then(function () {
+			adminCreateSubmit.disabled = false;
+		});
+	});
+
+	function renderDistribution(targetId, values) {
+		var list = document.getElementById(targetId);
+		list.textContent = '';
 		Object.keys(values || {}).forEach(function (key) {
 			var row = document.createElement('div');
-			row.className = 'category-list';
 			var label = document.createElement('span');
 			var count = document.createElement('b');
 			label.textContent = key;
 			count.textContent = String(values[key]);
 			row.appendChild(label);
 			row.appendChild(count);
-			section.appendChild(row);
+			list.appendChild(row);
 		});
 		if (!Object.keys(values || {}).length) {
 			var empty = document.createElement('p');
 			empty.textContent = 'No data is available yet.';
-			section.appendChild(empty);
+			list.appendChild(empty);
 		}
-		content.appendChild(section);
+	}
+
+	function isCount(value) {
+		return Number.isInteger(value) && value >= 0;
+	}
+
+	function isCountDistribution(value) {
+		return value && typeof value === 'object' && !Array.isArray(value) &&
+			Object.keys(value).every(function (key) { return isCount(value[key]); });
 	}
 
 	function render(data) {
+		var countFields = [
+			'user_count', 'active_user_count', 'total_assessments',
+			'completed_assessments', 'prediction_count', 'recommendation_count'
+		];
+		if (!data || !countFields.every(function (field) { return isCount(data[field]); }) ||
+			!isCountDistribution(data.assessment_status_distribution) ||
+			!isCountDistribution(data.risk_level_distribution) ||
+			typeof data.generated_at !== 'string' || !data.generated_at || isNaN(Date.parse(data.generated_at))) {
+			throw new Error('The admin analytics response was incomplete or invalid.');
+		}
 		errorState.hidden = true;
-		setStat(0, 'Total users', data.user_count, 'Live registered accounts');
-		setStat(1, 'Active users', data.active_user_count, 'Currently active accounts');
-		setStat(2, 'Total assessments', data.total_assessments, 'Live assessment records');
-		setStat(3, 'Completed assessments', data.completed_assessments, 'Live completed records');
-		setStat(4, 'Predictions generated', data.prediction_count, 'Live prediction records');
-		var extra = document.createElement('article');
-		extra.className = 'stat-card';
-		extra.innerHTML = '<span>Recommendations generated</span><strong></strong><small>Live recommendation records</small>';
-		extra.querySelector('strong').textContent = String(data.recommendation_count);
-		document.querySelector('.stat-grid').appendChild(extra);
+		document.querySelectorAll('[data-stat]').forEach(function (element) {
+			element.textContent = String(data[element.getAttribute('data-stat')]);
+		});
 		document.querySelector('.admin-pill').textContent = 'Live admin data';
 		document.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
 		document.querySelector('.admin-intro p:not(.eyebrow)').textContent = 'Review live system totals and distributions from the protected administration service.';
-		document.querySelector('.summary-note').textContent = 'Generated ' + new Date(data.generated_at).toLocaleString();
+		document.getElementById('generated-at').textContent = 'Generated ' + new Date(data.generated_at).toLocaleString();
 		document.querySelector('.sidebar-note strong').textContent = 'Live administration';
 		document.querySelector('.sidebar-note small').textContent = 'System data from the protected analytics service.';
-		document.querySelector('.admin-content > .admin-section').hidden = false;
+		document.getElementById('overview-section').hidden = false;
+		document.getElementById('admin-create-section').hidden = false;
 		content.querySelectorAll('.admin-empty-state').forEach(function (section) { section.hidden = false; });
-		renderDistribution('Assessment status distribution', data.assessment_status_distribution);
-		renderDistribution('Risk-level distribution', data.risk_level_distribution);
+		renderDistribution('assessment-distribution', data.assessment_status_distribution);
+		renderDistribution('risk-distribution', data.risk_level_distribution);
 	}
 
 	function load() {
@@ -93,6 +137,7 @@
 				forbidden.status = 403;
 				throw forbidden;
 			}
+			adminCreateSection.hidden = false;
 			return window.FinpathAPI.getSystemAnalytics();
 		}).then(render).catch(function (reason) {
 			if (reason && reason.status === 401) { window.location.href = '/login?next=/admin'; return; }

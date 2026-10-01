@@ -1,7 +1,7 @@
 (function () {
 	'use strict';
 
-	document.querySelectorAll('a[href="#forgot-password"], a[href="#terms"], a[href="#privacy"]').forEach(function (link) { link.remove(); });
+	document.querySelectorAll('a[href="#terms"], a[href="#privacy"]').forEach(function (link) { link.remove(); });
 
 	function showError(element, message) {
 		element.textContent = message;
@@ -78,9 +78,70 @@
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
-				.then(function () { window.location.href = '/dashboard'; })
+				.then(function () { return window.FinpathAPI.me(); })
+				.then(function (user) { window.location.href = user && user.role === 'admin' ? '/admin' : '/dashboard'; })
 				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });
 		});
+	}
+
+	var forgotPasswordLink = document.getElementById('forgot-password-link');
+	var forgotPasswordView = document.getElementById('forgot-password-view');
+	var forgotPasswordForm = document.getElementById('forgot-password-form');
+	if (forgotPasswordLink && forgotPasswordView && forgotPasswordForm) {
+		var forgotPasswordBack = document.getElementById('forgot-password-back');
+		var forgotPasswordStatus = document.getElementById('forgot-password-status');
+		var forgotPasswordSubmit = document.getElementById('forgot-password-submit');
+		var loginHeading = document.getElementById('login-title');
+		var loginDescription = document.getElementById('auth-heading-description');
+		var loginSwitch = document.querySelector('#auth-form + .auth-switch');
+
+		function showForgotPassword() {
+			loginForm.hidden = true;
+			loginError.hidden = true;
+			status.textContent = '';
+			loginSwitch.hidden = true;
+			forgotPasswordView.hidden = false;
+			loginHeading.textContent = 'Reset your password';
+			loginDescription.textContent = 'Enter your email address and we will send reset instructions if an account matches.';
+			document.getElementById('forgot-password-email').focus();
+		}
+
+		function showLogin() {
+			forgotPasswordView.hidden = true;
+			loginForm.hidden = false;
+			loginSwitch.hidden = false;
+			loginHeading.textContent = 'Welcome Back';
+			loginDescription.textContent = 'Sign in to continue to your FINPATH account.';
+			forgotPasswordStatus.textContent = '';
+			window.history.replaceState(null, '', window.location.pathname + window.location.search);
+		}
+
+		forgotPasswordLink.addEventListener('click', function (event) {
+			event.preventDefault();
+			window.history.replaceState(null, '', window.location.pathname + window.location.search + '#forgot-password');
+			showForgotPassword();
+		});
+		forgotPasswordBack.addEventListener('click', function (event) {
+			event.preventDefault();
+			showLogin();
+		});
+		forgotPasswordForm.addEventListener('submit', function (event) {
+			event.preventDefault();
+			if (!forgotPasswordForm.checkValidity()) {
+				forgotPasswordForm.reportValidity();
+				return;
+			}
+			forgotPasswordSubmit.disabled = true;
+			forgotPasswordStatus.textContent = 'Submitting your request...';
+			window.FinpathAPI.requestPasswordReset(document.getElementById('forgot-password-email').value.trim())
+				.then(function () {}, function () {})
+				.then(function () {
+					forgotPasswordStatus.textContent = 'If an account exists for that email, a password reset link will be sent shortly. Check your inbox, or try again later.';
+					forgotPasswordSubmit.disabled = false;
+				});
+		});
+
+		if (window.location.hash === '#forgot-password') showForgotPassword();
 	}
 
 	var registerForm = document.getElementById('register-form');
