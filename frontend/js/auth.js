@@ -77,9 +77,17 @@
 			clearError(loginError);
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
+			var allowedDestinations = ['/admin', '/dashboard', '/analytics'];
+			var requestedDestination = new URLSearchParams(window.location.search).get('next');
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
 				.then(function () { return window.FinpathAPI.me(); })
-				.then(function (user) { window.location.href = user && user.role === 'admin' ? '/admin' : '/dashboard'; })
+				.then(function (user) {
+					var isAdmin = user && user.role === 'admin';
+					var fallback = isAdmin ? '/admin' : '/dashboard';
+					var destination = allowedDestinations.indexOf(requestedDestination) !== -1 ? requestedDestination : fallback;
+					if (destination === '/admin' && !isAdmin) destination = fallback;
+					window.location.href = destination;
+				})
 				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });
 		});
 	}
