@@ -11,6 +11,7 @@ from backend.dependencies import get_db
 from backend.main import app
 from backend.schemas.prediction import PredictionCreate
 from backend.routes import prediction as prediction_route
+from backend.services.prediction_service import PredictionService, RealFinpathPredictor
 
 
 TEST_ENGINE = create_engine(
@@ -64,6 +65,55 @@ def create_assessment(token: str, status: str = "draft"):
         "/api/v1/assessments",
         headers={"Authorization": f"Bearer {token}"},
         json={"assessment_data": {"future_feature": 1}, "assessment_status": status},
+    )
+
+
+def complete_ml_assessment_data(loan_usage: str, mobile_money_use: str) -> dict:
+    data = {
+        "age_range": "25-34",
+        "sex": "Female",
+        "county": "Nairobi City",
+        "education": "Secondary completed",
+        "marital_status": "Single / Never Married",
+        "savings_usage": "Yes",
+        "emergency_savings": "No",
+        "loan_usage": loan_usage,
+        "chama_usage": "No",
+        "sacco_use": "Regular",
+        "mobile_money_use": mobile_money_use,
+        "CountLivelihood": "1",
+        "financial_literacy_score": "3",
+    }
+    if loan_usage == "Yes":
+        data.update({
+            "loan_formal": "No",
+            "loan_informal": "No",
+            "digital_credit_usage": "No",
+            "loan_app_2": "No",
+            "loan_fuliza_2": "No",
+            "defaulted": "No",
+        })
+    if mobile_money_use != "No":
+        data["S7_2"] = "4"
+    return data
+
+
+def create_real_prediction(token: str, assessment_data: dict, monkeypatch):
+    monkeypatch.setattr(
+        prediction_route,
+        "prediction_service",
+        PredictionService(RealFinpathPredictor()),
+    )
+    assessment_response = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_data": assessment_data, "assessment_status": "completed"},
+    )
+    assert assessment_response.status_code == 201
+    return client.post(
+        "/api/v1/predictions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_id": assessment_response.json()["id"]},
     )
 
 
@@ -130,7 +180,7 @@ def test_assessment_ownership_is_enforced():
     ).status_code == 404
 
 
-def test_prediction_requires_completed_owned_assessment():
+def test_prediction_requires_completed_assessment_and_rejects_incomplete_input():
     token = register_and_login("predictor@example.com")
     assessment_id = create_assessment(token).json()["id"]
     response = client.post(
@@ -141,13 +191,72 @@ def test_prediction_requires_completed_owned_assessment():
     assert response.status_code == 409
 
     completed_id = create_assessment(token, "completed").json()["id"]
-    unavailable = client.post(
+    incomplete = client.post(
         "/api/v1/predictions",
         headers={"Authorization": f"Bearer {token}"},
         json={"assessment_id": completed_id},
     )
+    assert incomplete.status_code == 409
+    assert "age range is required" in incomplete.json()["detail"].lower()
+
+
+def test_valid_assessment_still_returns_503_when_model_is_unavailable():
+    token = register_and_login("model-unavailable@example.com")
+    assessment = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {token}"},
+        json={
+            "assessment_data": complete_ml_assessment_data("No", "No"),
+            "assessment_status": "completed",
+        },
+    )
+
+    unavailable = client.post(
+        "/api/v1/predictions",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"assessment_id": assessment.json()["id"]},
+    )
+
     assert unavailable.status_code == 503
     assert "prediction service" in unavailable.json()["detail"].lower()
+
+
+def test_real_model_prediction_accepts_populated_conditional_fields(monkeypatch):
+    token = register_and_login("conditional-yes@example.com")
+
+    response = create_real_prediction(
+        token,
+        complete_ml_assessment_data("Yes", "Regular"),
+        monkeypatch,
+    )
+
+    assert response.status_code == 201, response.json()
+    assert response.json()["assessment_id"] > 0
+    assert response.json()["model_version"]
+
+
+def test_real_model_prediction_accepts_legitimately_omitted_conditional_fields(monkeypatch):
+    token = register_and_login("conditional-no@example.com")
+
+    response = create_real_prediction(
+        token,
+        complete_ml_assessment_data("No", "No"),
+        monkeypatch,
+    )
+
+    assert response.status_code == 201, response.json()
+    assert response.json()["assessment_id"] > 0
+
+
+def test_real_mapper_rejects_missing_required_assessment_data_with_409(monkeypatch):
+    token = register_and_login("conditional-incomplete@example.com")
+    assessment_data = complete_ml_assessment_data("No", "No")
+    del assessment_data["education"]
+
+    response = create_real_prediction(token, assessment_data, monkeypatch)
+
+    assert response.status_code == 409
+    assert "education" in response.json()["detail"].lower()
 
 
 def test_prediction_for_other_users_assessment_is_hidden():

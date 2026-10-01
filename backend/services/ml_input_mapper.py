@@ -14,6 +14,8 @@ DO NOT:
 
 from typing import Any, Dict, List, Mapping, Optional
 
+from ml.predict import DEFAULTS
+
 
 class MLInputValidationError(ValueError):
 	"""Raised when assessment data fails ML contract validation."""
@@ -390,24 +392,21 @@ class MLInputMapper:
 		result["Loan_usage"] = self.map_binary(
 			assessment_data.get("loan_usage"), "Loan usage"
 		)
-		result["Loan_formal"] = self.map_binary(
-			assessment_data.get("loan_formal"), "Formal loan"
+		loan_fields = (
+			("Loan_formal", "loan_formal", "Formal loan"),
+			("Loan_informal", "loan_informal", "Informal loan"),
+			("Digital_credit_usage", "digital_credit_usage", "Digital credit usage"),
+			("loan_app_2", "loan_app_2", "Loan app usage"),
+			("loan_fuliza_2", "loan_fuliza_2", "Fuliza usage"),
+			("defaulted", "defaulted", "Loan default"),
 		)
-		result["Loan_informal"] = self.map_binary(
-			assessment_data.get("loan_informal"), "Informal loan"
-		)
-		result["Digital_credit_usage"] = self.map_binary(
-			assessment_data.get("digital_credit_usage"), "Digital credit usage"
-		)
-		result["loan_app_2"] = self.map_binary(
-			assessment_data.get("loan_app_2"), "Loan app usage"
-		)
-		result["loan_fuliza_2"] = self.map_binary(
-			assessment_data.get("loan_fuliza_2"), "Fuliza usage"
-		)
-		result["defaulted"] = self.map_binary(
-			assessment_data.get("defaulted"), "Loan default"
-		)
+		for model_field, assessment_field, label in loan_fields:
+			if result["Loan_usage"] == 0:
+				result[model_field] = DEFAULTS[model_field]
+			else:
+				result[model_field] = self.map_binary(
+					assessment_data.get(assessment_field), label
+				)
 
 		# === SERVICES & DIGITAL ACCESS ===
 		result["chama_usage"] = self.map_binary(
@@ -417,7 +416,10 @@ class MLInputMapper:
 		result["mobile_money_use"] = self.map_mobile_money_use(
 			assessment_data.get("mobile_money_use")
 		)
-		result["S7_2"] = self.map_s7_2_frequency(assessment_data.get("S7_2"))
+		if result["mobile_money_use"] == 0:
+			result["S7_2"] = DEFAULTS["S7_2"]
+		else:
+			result["S7_2"] = self.map_s7_2_frequency(assessment_data.get("S7_2"))
 
 		# === RESILIENCE & KNOWLEDGE ===
 		result["CountLivelihood"] = self.map_count_livelihood(

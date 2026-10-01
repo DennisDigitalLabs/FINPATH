@@ -21,16 +21,13 @@ class MLInputAdapter(Protocol):
 
 
 class AssessmentDataInputAdapter:
-        """Backward-compatible adapter delegating to the authoritative MLInputMapper."""
+	"""Backward-compatible adapter delegating to the authoritative MLInputMapper."""
 
-        def __init__(self):
-                self.mapper = MLInputMapper()
+	def __init__(self):
+		self.mapper = MLInputMapper()
 
-        def prepare(self, assessment_data: Mapping[str, Any]) -> Mapping[str, Any]:
-                try:
-                        return self.mapper.map_assessment_data(assessment_data)
-                except MLInputValidationError as exc:
-                        raise ValueError(str(exc)) from exc
+	def prepare(self, assessment_data: Mapping[str, Any]) -> Mapping[str, Any]:
+		return self.mapper.map_assessment_data(assessment_data)
 
 
 class MLPredictor(Protocol):
@@ -195,11 +192,7 @@ class MLInputMapperAdapter:
 
 	def prepare(self, assessment_data: Mapping[str, Any]) -> Any:
 		"""Convert assessment data using authoritative ML input mapper."""
-		try:
-			return self.mapper.map_assessment_data(assessment_data)
-		except MLInputValidationError as exc:
-			# Wrap mapper errors in ValueError for backward compatibility
-			raise ValueError(str(exc)) from exc
+		return self.mapper.map_assessment_data(assessment_data)
 
 
 class PredictionService:
@@ -244,10 +237,8 @@ class PredictionService:
 		if self.input_adapter is not None:
 			try:
 				model_input = self.input_adapter.prepare(assessment.assessment_data or {})
-			except ValueError as exc:
-				raise PredictionUnavailableError(
-					"The FINPATH prediction model is unavailable for the provided assessment data"
-				) from exc
+			except MLInputValidationError as exc:
+				raise ValueError(f"Invalid assessment data: {exc}") from exc
 		else:
 			model_input = assessment.assessment_data or {}
 		raw_output = self.predictor.predict(model_input)

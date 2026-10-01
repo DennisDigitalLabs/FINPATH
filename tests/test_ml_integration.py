@@ -130,3 +130,52 @@ def test_assessment_input_adapter_maps_required_finpath_fields_and_rejects_missi
 
     with pytest.raises(ValueError, match="Age range"):
         AssessmentDataInputAdapter().prepare(missing)
+
+
+def test_mapper_uses_existing_model_defaults_only_for_not_applicable_fields():
+    source = {
+        "age_range": "25-34",
+        "sex": 2,
+        "county": 47,
+        "education": 5,
+        "marital_status": 1,
+        "savings_usage": 1,
+        "emergency_savings": 0,
+        "loan_usage": "No",
+        "chama_usage": 0,
+        "sacco_use": 3,
+        "mobile_money_use": "No",
+        "CountLivelihood": 1,
+        "financial_literacy_score": 3,
+    }
+
+    prepared = AssessmentDataInputAdapter().prepare(source)
+
+    assert {field: prepared[field] for field in (
+        "Loan_formal", "Loan_informal", "Digital_credit_usage",
+        "loan_app_2", "loan_fuliza_2", "defaulted", "S7_2",
+    )} == {
+        "Loan_formal": 0,
+        "Loan_informal": 0,
+        "Digital_credit_usage": 0,
+        "loan_app_2": 0,
+        "loan_fuliza_2": 0,
+        "defaulted": 0,
+        "S7_2": 4,
+    }
+
+    source["loan_usage"] = "Yes"
+    source.update({
+        "loan_informal": "No",
+        "digital_credit_usage": "No",
+        "loan_app_2": "No",
+        "loan_fuliza_2": "No",
+        "defaulted": "No",
+    })
+    with pytest.raises(ValueError, match="Formal loan is required"):
+        AssessmentDataInputAdapter().prepare(source)
+
+    source["loan_formal"] = "No"
+    source["mobile_money_use"] = "Regular"
+    with pytest.raises(ValueError, match="transaction frequency is required"):
+        AssessmentDataInputAdapter().prepare(source)
