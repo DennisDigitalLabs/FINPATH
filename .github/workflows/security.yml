@@ -1,0 +1,73 @@
+name: Security
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+  schedule:
+    - cron: '0 6 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  dependency-audit:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements-production.txt
+          python -m pip install safety bandit
+
+      - name: Run dependency audit
+        run: >-
+          python -m safety check -r requirements-production.txt --full-report
+          --check-unpinned-requirements
+
+      - name: Run Python security scan
+        run: python -m bandit -r backend ml -q
+
+  secret-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Check for obvious secrets
+        run: |
+          python - <<'PY'
+          import re, pathlib, sys
+          root = pathlib.Path('.')
+          bad = []
+          placeholder = "SECRET_KEY=replace-with-a-random-secret-at-least-32-characters"
+          patterns = [
+              re.compile(r'(?i)(AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|ghp_[A-Za-z0-9]{36,})'),
+              re.compile(r'(?i)SECRET_KEY\s*=\s*[A-Za-z0-9/+=\-]{16,}'),
+          ]
+          for path in sorted(root.rglob('*')):
+              if not path.is_file() or '.git' in path.parts:
+                  continue
+              try:
+                  text = path.read_text(encoding='utf-8')
+              except Exception:
+                  continue
+              text = text.replace(placeholder, '')
+              if any(p.search(text) for p in patterns):
+                  bad.append(str(path))
+          if bad:
+              print('Potential secrets detected:')
+              for item in bad:
+                  print(item)
+              sys.exit(1)
+          print('No obvious secrets detected.')
+          PY

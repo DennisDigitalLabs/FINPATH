@@ -1,0 +1,25 @@
+{
+  "raw_rows": 20871,
+  "raw_variables": 3816,
+  "youth_rows": 9358,
+  "target_counts": {
+    "High Risk": 2543,
+    "Moderate Risk": 4122,
+    "Low Risk": 2693
+  },
+  "target_missing": 0,
+  "age_codes": {
+    "2": 3997,
+    "3": 5361
+  },
+  "key_missingness": {
+    "Age": 0,
+    "Sex": 0,
+    "county": 0,
+    "Savings_usage": 0,
+    "Loan_usage": 0,
+    "sacco_use": 3,
+    "mobile_money_use": 2,
+    "Financial_literacy_index_fnl": 0
+  }
+}

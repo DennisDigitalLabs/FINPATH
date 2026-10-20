@@ -1,6 +1,6 @@
 services:
   - type: web
-    name: finpath-backend
+    name: finpath-api
     runtime: python
     plan: free
     rootDir: .
@@ -18,10 +18,12 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "30"
+      - key: DATABASE_URL
+        sync: false
       - key: CORS_ORIGINS
-        value: '["https://finpath-frontend.onrender.com"]'
+        value: '["https://finpath.onrender.com"]'
       - key: FRONTEND_URL
-        value: "https://finpath-frontend.onrender.com"
+        value: "https://finpath.onrender.com"
       - key: RESET_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: SMTP_HOST
@@ -42,7 +44,7 @@ services:
         value: v1
 
   - type: web
-    name: finpath-frontend
+    name: finpath
     runtime: static
     rootDir: .
     staticPublishPath: frontend
@@ -57,6 +59,12 @@ services:
       - type: rewrite
         source: /register
         destination: /register.html
+      - type: rewrite
+        source: /forgot-password
+        destination: /forgot-password.html
+      - type: rewrite
+        source: /reset-password
+        destination: /reset-password.html
       - type: rewrite
         source: /dashboard
         destination: /dashboard.html
@@ -78,6 +86,3 @@ services:
       - type: rewrite
         source: /admin
         destination: /admin.html
-    envVars:
-      - key: API_BASE_URL
-        value: "https://finpath-backend.onrender.com"

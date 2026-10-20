@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.13']
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+
+      - name: Run pytest
+        env:
+          SECRET_KEY: "ci-test-secret-not-for-production"
+        run: python -m pytest -q -rA
+
+      - name: Validate frontend JavaScript syntax
+        run: |
+          node --check frontend/js/api.js
+          node --check frontend/js/auth.js
+          node --check frontend/js/assessment.js
+          node --check frontend/js/prediction.js
+          node --check frontend/js/recommendations.js
+          node --check frontend/js/dashboard.js
+          node --check frontend/js/analytics.js
+          node --check frontend/js/admin.js
