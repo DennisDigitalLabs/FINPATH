@@ -6,6 +6,7 @@ Initializes the FastAPI application with database, middleware, and routes.
 """
 
 from contextlib import asynccontextmanager
+import logging
 from typing import Any, Dict
 
 from fastapi import FastAPI, Request
@@ -23,6 +24,7 @@ from backend.routes.analytics import router as analytics_router
 
 # Get settings
 settings = get_settings()
+logger = logging.getLogger(__name__)
 
 
 @asynccontextmanager
@@ -81,6 +83,12 @@ async def add_security_headers(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def handle_unexpected_error(request: Request, exc: Exception):
+    logger.error(
+        "Unhandled API exception for %s %s",
+        request.method,
+        request.url.path,
+        exc_info=(type(exc), exc, exc.__traceback__),
+    )
     return JSONResponse(
         status_code=500,
         content={"detail": "An unexpected internal error occurred"},

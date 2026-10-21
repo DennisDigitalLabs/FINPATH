@@ -149,9 +149,15 @@
 			forgotPasswordSubmit.disabled = true;
 			forgotPasswordStatus.textContent = 'Submitting your request...';
 			window.FinpathAPI.requestPasswordReset(document.getElementById('forgot-password-email').value.trim())
-				.then(function () {}, function () {})
 				.then(function () {
 					forgotPasswordStatus.textContent = 'If an account exists for that email, a password reset link will be sent shortly. Check your inbox, or try again later.';
+				})
+				.catch(function (reason) {
+					forgotPasswordStatus.textContent = reason && reason.status === 503
+						? 'Password reset is temporarily unavailable. Please try again later.'
+						: 'We could not submit your password reset request. Please try again later.';
+				})
+				.then(function () {
 					forgotPasswordSubmit.disabled = false;
 				});
 		});

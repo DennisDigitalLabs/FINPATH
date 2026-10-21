@@ -21,6 +21,8 @@
 	var currentStep = 0;
 	var totalQuestions = steps.length - 1;
 	var isSubmitting = false;
+	var submittedAssessment = null;
+	var assessmentIdempotencyStorageKey = 'finpath_assessment_idempotency_key';
 
 	// Conditional logic: Show/hide loan-related fields based on loan_usage
 	var loanUsageField = document.getElementById('loan-usage');
@@ -136,24 +138,65 @@
 		return data;
 	}
 
+	function getAssessmentIdempotencyKey() {
+		var existingKey = window.sessionStorage.getItem(assessmentIdempotencyStorageKey);
+		if (existingKey) return existingKey;
+		if (!window.crypto || typeof window.crypto.randomUUID !== 'function') {
+			throw new Error('Secure assessment submission is unavailable in this browser. Please update your browser and try again.');
+		}
+		var key = window.crypto.randomUUID();
+		window.sessionStorage.setItem(assessmentIdempotencyStorageKey, key);
+		return key;
+	}
+
+	function findOrCreatePrediction(assessment) {
+		return window.FinpathAPI.listPredictions(assessment.id).then(function (predictions) {
+			if (!Array.isArray(predictions)) throw new Error('The prediction history response was invalid.');
+			if (predictions.length) return { assessment: assessment, prediction: predictions[0] };
+			return window.FinpathAPI.createPrediction(assessment.id).then(function (prediction) {
+				return { assessment: assessment, prediction: prediction };
+			});
+		});
+	}
+
 	function handleSubmit() {
 		var assessment;
+		var predictionRequest;
 		if (isSubmitting) return;
 		if (!window.FinpathAPI.getToken()) { redirectToLogin(); return; }
+		var idempotencyKey;
+		if (!submittedAssessment) {
+			try {
+				idempotencyKey = getAssessmentIdempotencyKey();
+			} catch (error) {
+				showMessage(error.message, true);
+				return;
+			}
+		}
 		isSubmitting = true;
 		completeButton.disabled = true;
 		nextButton.disabled = true;
 		previousButton.disabled = true;
-		showMessage('Submitting your assessment...', false);
-		assessment = { assessment_data: formDataObject(), assessment_status: 'completed' };
-		window.FinpathAPI.createAssessment(assessment)
-			.then(function (created) {
-				showMessage('Assessment submitted. Generating your explainable prediction...', false);
-				return window.FinpathAPI.createPrediction(created.id).then(function (prediction) {
-					return { assessment: created, prediction: prediction };
+		if (submittedAssessment) {
+			showMessage('Checking for an existing prediction...', false);
+			predictionRequest = findOrCreatePrediction(submittedAssessment);
+		} else {
+			showMessage('Submitting your assessment...', false);
+			assessment = { assessment_data: formDataObject(), assessment_status: 'completed' };
+			predictionRequest = window.FinpathAPI.createAssessment(assessment, idempotencyKey)
+				.then(function (created) {
+					submittedAssessment = created;
+					Array.prototype.forEach.call(form.querySelectorAll('input, select, textarea'), function (field) {
+						field.disabled = true;
+					});
+					completeButton.textContent = 'Retry prediction';
+					showMessage('Assessment submitted. Generating your explainable prediction...', false);
+					return findOrCreatePrediction(created);
 				});
-			})
+		}
+		predictionRequest
 			.then(function (result) {
+				window.sessionStorage.removeItem(assessmentIdempotencyStorageKey);
 				form.hidden = true;
 				document.querySelector('.assessment-sidebar').hidden = true;
 				validationSummary.hidden = true;
@@ -170,7 +213,9 @@
 				nextButton.disabled = false;
 				previousButton.disabled = false;
 				if (reason && reason.status === 401) { redirectToLogin(); return; }
-				showMessage(reason && reason.message ? reason.message : 'We could not complete your assessment. Please try again.', true);
+				showMessage(submittedAssessment
+					? 'Your assessment was saved, but prediction generation failed. Select Retry prediction to continue without creating another assessment.'
+					: (reason && reason.message ? reason.message : 'We could not complete your assessment. Please try again.'), true);
 			});
 	}
 

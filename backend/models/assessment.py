@@ -57,6 +57,7 @@ class Assessment(Base):
         nullable=True,
         default=dict
     )
+    idempotency_key: Mapped[str | None] = mapped_column(String(36), nullable=True)
     
     # Assessment Timestamp
     assessment_date: Mapped[datetime] = mapped_column(
@@ -96,6 +97,12 @@ class Assessment(Base):
     __table_args__ = (
         Index("ix_assessments_status", "assessment_status"),
         Index("ix_assessments_date", "assessment_date"),
+        Index(
+            "uq_assessments_user_idempotency_key",
+            "user_id",
+            "idempotency_key",
+            unique=True,
+        ),
     )
     
     def __repr__(self) -> str:

@@ -9,7 +9,7 @@ from sqlalchemy.pool import StaticPool
 from backend.database import Base
 from backend.dependencies import get_db
 from backend.main import app
-from backend.models import Prediction
+from backend.models import Prediction, Recommendation
 from backend.schemas.prediction import PredictionCreate
 from backend.routes import prediction as prediction_route
 from backend.services.prediction_service import PredictionService, RealFinpathPredictor
@@ -158,6 +158,65 @@ def test_assessment_requires_authentication_and_valid_status():
     assert client.post("/api/v1/assessments", json={"assessment_data": {}}).status_code == 401
     token = register_and_login("validation@example.com")
     response = create_assessment(token, "submitted")
+    assert response.status_code == 422
+
+
+def test_assessment_creation_is_idempotent_per_user_and_request_key():
+    token = register_and_login("idempotent@example.com")
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "Idempotency-Key": "f87410a6-f58e-4ea6-94a4-388cc167747d",
+    }
+    payload = {
+        "assessment_data": {"age_range": "25-34"},
+        "assessment_status": "completed",
+    }
+
+    first = client.post("/api/v1/assessments", headers=headers, json=payload)
+    retried = client.post("/api/v1/assessments", headers=headers, json=payload)
+
+    assert first.status_code == retried.status_code == 201
+    assert retried.json()["id"] == first.json()["id"]
+    assert len(client.get("/api/v1/assessments", headers={"Authorization": f"Bearer {token}"}).json()) == 1
+
+    conflicting = client.post(
+        "/api/v1/assessments",
+        headers=headers,
+        json={"assessment_data": {"age_range": "35-44"}, "assessment_status": "completed"},
+    )
+    assert conflicting.status_code == 409
+    assert len(client.get("/api/v1/assessments", headers={"Authorization": f"Bearer {token}"}).json()) == 1
+
+
+def test_assessment_idempotency_key_is_scoped_to_authenticated_user():
+    owner_token = register_and_login("idempotency-owner@example.com")
+    other_token = register_and_login("idempotency-other@example.com")
+    key = "e8d928b3-fcdb-4c2a-a563-e953075e35ef"
+    payload = {"assessment_data": {"age_range": "25-34"}, "assessment_status": "completed"}
+
+    owner_assessment = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {owner_token}", "Idempotency-Key": key},
+        json=payload,
+    )
+    other_assessment = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {other_token}", "Idempotency-Key": key},
+        json=payload,
+    )
+
+    assert owner_assessment.status_code == other_assessment.status_code == 201
+    assert owner_assessment.json()["id"] != other_assessment.json()["id"]
+
+
+def test_assessment_rejects_malformed_idempotency_key():
+    token = register_and_login("invalid-idempotency@example.com")
+    response = client.post(
+        "/api/v1/assessments",
+        headers={"Authorization": f"Bearer {token}", "Idempotency-Key": "not-a-uuid"},
+        json={"assessment_data": {}, "assessment_status": "completed"},
+    )
+
     assert response.status_code == 422
 
 
@@ -313,6 +372,28 @@ def test_real_model_prediction_is_persisted_and_retrievable_by_owner(monkeypatch
     assert retrieved.json() == generated_data
     assert retrieved.json()["id"] == prediction_id
     assert retrieved.json()["assessment_id"] == assessment_id
+
+    recommendation_response = client.get(
+        f"/api/v1/recommendations/by-prediction/{prediction_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert recommendation_response.status_code == 200
+    recommendations = recommendation_response.json()
+    assert recommendations
+    assert all(item["prediction_id"] == prediction_id for item in recommendations)
+
+    db = TestSessionLocal()
+    try:
+        persisted_recommendations = (
+            db.query(Recommendation)
+            .filter(Recommendation.prediction_id == prediction_id)
+            .all()
+        )
+        assert {item.id for item in persisted_recommendations} == {
+            item["id"] for item in recommendations
+        }
+    finally:
+        db.close()
 
 
 def test_real_mapper_rejects_missing_required_assessment_data_with_409(monkeypatch):

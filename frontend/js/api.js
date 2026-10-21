@@ -95,7 +95,13 @@
 		postAuthenticated: post,
 		putAuthenticated: put,
 		deleteAuthenticated: remove,
-		createAssessment: function (data) { return post('/api/v1/assessments', data); },
+		createAssessment: function (data, idempotencyKey) {
+			return request('/api/v1/assessments', {
+				method: 'POST',
+				body: data,
+				headers: idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}
+			});
+		},
 		listAssessments: function () { return get('/api/v1/assessments'); },
 		getAssessment: function (id) { return get('/api/v1/assessments/' + encodeURIComponent(id)); },
 		updateAssessment: function (id, data) { return put('/api/v1/assessments/' + encodeURIComponent(id), data); },
