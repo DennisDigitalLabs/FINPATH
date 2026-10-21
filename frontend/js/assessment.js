@@ -127,12 +127,12 @@
 
 	function formDataObject() {
 		var data = {};
-		Array.prototype.forEach.call(new FormData(form).entries(), function (entry) {
+		for (const entry of new FormData(form).entries()) {
 			// Skip empty values and hidden field group values
 			if (entry[1] !== '' && !entry[0].startsWith('_hidden_')) {
 				data[entry[0]] = entry[1];
 			}
-		});
+		}
 		return data;
 	}
 

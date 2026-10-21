@@ -198,7 +198,7 @@ def test_prediction_requires_completed_assessment_and_rejects_incomplete_input()
         json={"assessment_id": completed_id},
     )
     assert incomplete.status_code == 409
-    assert "age range is required" in incomplete.json()["detail"].lower()
+    assert incomplete.json()["detail"] == "Invalid assessment data: Age range is required"
 
 
 def test_valid_assessment_still_returns_503_when_model_is_unavailable():
@@ -303,6 +303,7 @@ def test_real_model_prediction_is_persisted_and_retrievable_by_owner(monkeypatch
     )
     assert assessment.status_code == 200
     assert assessment.json()["user_id"] == user.json()["id"]
+    assert assessment.json()["assessment_data"]["age_range"] == "25-34"
 
     retrieved = client.get(
         f"/api/v1/predictions/{prediction_id}",
