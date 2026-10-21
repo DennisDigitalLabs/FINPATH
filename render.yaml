@@ -21,9 +21,9 @@ services:
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
-        value: '["https://finpath.onrender.com"]'
+        value: '["https://finpath-1afl.onrender.com"]'
       - key: FRONTEND_URL
-        value: "https://finpath.onrender.com"
+        value: "https://finpath-1afl.onrender.com"
       - key: RESET_TOKEN_EXPIRE_MINUTES
         value: "30"
       - key: SMTP_HOST
@@ -86,3 +86,4 @@ services:
       - type: rewrite
         source: /admin
         destination: /admin.html
+

@@ -98,6 +98,46 @@ def seed_prediction_and_recommendation(assessment_id: int) -> tuple[int, int]:
     return ids
 
 
+def seed_prediction(assessment_id: int) -> int:
+    db = TestSessionLocal()
+    now = datetime.now(timezone.utc)
+    prediction = Prediction(
+        assessment_id=assessment_id,
+        risk_level="medium",
+        risk_category="financial_access",
+        probability=0.6,
+        confidence=0.8,
+        explanation="Stored test prediction.",
+        contributing_factors={"feature": 1},
+        model_version="test-model",
+        prediction_timestamp=now,
+        created_at=now,
+    )
+    db.add(prediction)
+    db.commit()
+    db.refresh(prediction)
+    prediction_id = prediction.id
+    db.close()
+    return prediction_id
+
+
+def seed_recommendation(prediction_id: int, text: str) -> int:
+    db = TestSessionLocal()
+    recommendation = Recommendation(
+        prediction_id=prediction_id,
+        category="financial literacy",
+        recommendation_text=text,
+        priority=1,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(recommendation)
+    db.commit()
+    db.refresh(recommendation)
+    recommendation_id = recommendation.id
+    db.close()
+    return recommendation_id
+
+
 def test_recommendation_retrieval_and_ownership():
     owner_token = register_and_login("recommendation-owner@example.com")
     other_token = register_and_login("recommendation-other@example.com")
@@ -125,6 +165,71 @@ def test_recommendation_retrieval_and_ownership():
     )
     assert hidden.status_code == 404
     assert client.get("/api/v1/recommendations").status_code == 401
+
+
+def test_prediction_recommendations_are_scoped_and_empty_when_none_exist():
+    token = register_and_login("prediction-recommendations@example.com")
+    assessment_id = create_assessment(token)
+    first_prediction_id = seed_prediction(assessment_id)
+    second_prediction_id = seed_prediction(assessment_id)
+    first_recommendation_id = seed_recommendation(first_prediction_id, "First prediction action.")
+    second_recommendation_id = seed_recommendation(second_prediction_id, "Second prediction action.")
+    headers = {"Authorization": f"Bearer {token}"}
+
+    first = client.get(
+        f"/api/v1/recommendations/by-prediction/{first_prediction_id}",
+        headers=headers,
+    )
+    second = client.get(
+        f"/api/v1/recommendations/by-prediction/{second_prediction_id}",
+        headers=headers,
+    )
+    empty = client.get(
+        f"/api/v1/recommendations/by-prediction/{seed_prediction(assessment_id)}",
+        headers=headers,
+    )
+
+    assert first.status_code == 200
+    assert [item["id"] for item in first.json()] == [first_recommendation_id]
+    assert [item["prediction_id"] for item in first.json()] == [first_prediction_id]
+    assert second.status_code == 200
+    assert [item["id"] for item in second.json()] == [second_recommendation_id]
+    assert [item["prediction_id"] for item in second.json()] == [second_prediction_id]
+    assert empty.status_code == 200
+    assert empty.json() == []
+
+
+def test_prediction_recommendations_reject_unknown_and_other_users_predictions():
+    owner_token = register_and_login("prediction-owner@example.com")
+    other_token = register_and_login("prediction-other@example.com")
+    owner_assessment_id = create_assessment(owner_token)
+    owner_prediction_id = seed_prediction(owner_assessment_id)
+    recommendation_id = seed_recommendation(owner_prediction_id, "Private prediction action.")
+    other_headers = {"Authorization": f"Bearer {other_token}"}
+
+    unknown = client.get(
+        "/api/v1/recommendations/by-prediction/999999",
+        headers=other_headers,
+    )
+    forbidden = client.get(
+        f"/api/v1/recommendations/by-prediction/{owner_prediction_id}",
+        headers=other_headers,
+    )
+    owner_result = client.get(
+        f"/api/v1/recommendations/by-prediction/{owner_prediction_id}",
+        headers={"Authorization": f"Bearer {owner_token}"},
+    )
+
+    assert unknown.status_code == 404
+    assert unknown.json()["detail"] == "Prediction not found"
+    assert forbidden.status_code == 404
+    assert forbidden.json()["detail"] == unknown.json()["detail"]
+    assert owner_result.status_code == 200
+    assert [item["id"] for item in owner_result.json()] == [recommendation_id]
+
+
+def test_prediction_recommendations_require_authentication():
+    assert client.get("/api/v1/recommendations/by-prediction/1").status_code == 401
 
 
 def test_dashboard_returns_owned_data_and_null_without_prediction():

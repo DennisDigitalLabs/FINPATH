@@ -15,6 +15,17 @@ def list_user_recommendations(db: Session, user: User) -> list[Recommendation]:
 	)
 
 
+def list_prediction_recommendations(
+	db: Session, prediction_id: int
+) -> list[Recommendation]:
+	return (
+		db.query(Recommendation)
+		.filter(Recommendation.prediction_id == prediction_id)
+		.order_by(Recommendation.priority.asc(), Recommendation.created_at.desc())
+		.all()
+	)
+
+
 def get_user_recommendation(
 	db: Session, recommendation_id: int, user: User
 ) -> Recommendation | None:

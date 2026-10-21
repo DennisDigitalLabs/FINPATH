@@ -7,14 +7,28 @@
 	var recommendations = [];
 	var state = {};
 	var errorState = document.getElementById('recommendation-error');
+	var params = new URLSearchParams(window.location.search);
+	var rawPredictionId = params.get('prediction_id');
+	var predictionId = rawPredictionId && /^\d+$/.test(rawPredictionId) ? Number(rawPredictionId) : NaN;
 
-	function showError(message) {
+	function showError(message, backHref) {
 		list.hidden = true;
 		emptyState.hidden = true;
 		document.querySelector('.summary-section').hidden = true;
 		document.querySelector('.insight-panel').hidden = true;
+		errorState.innerHTML = '';
 		errorState.textContent = message;
+		var backLink = document.createElement('a');
+		backLink.className = 'btn btn-outline';
+		backLink.href = backHref || '/dashboard';
+		backLink.textContent = backHref ? 'Return to prediction' : 'Return to dashboard';
+		errorState.appendChild(backLink);
 		errorState.hidden = false;
+	}
+
+	function loginHref() {
+		var returnPath = '/recommendations?prediction_id=' + encodeURIComponent(rawPredictionId);
+		return '/login?next=' + encodeURIComponent(returnPath);
 	}
 
 	function formatCategory(category) {
@@ -98,7 +112,7 @@
 		list.innerHTML = '';
 		visible.forEach(function (item) { list.appendChild(buildCard(item)); });
 		list.hidden = false;
-		emptyState.textContent = recommendations.length ? 'No recommendations match this category yet.' : 'No recommendations are available yet. Complete an assessment to receive personalized next steps.';
+		emptyState.textContent = recommendations.length ? 'No recommendations match this category yet.' : 'No recommendations are available for this prediction yet.';
 		emptyState.hidden = visible.length > 0;
 		updateSummary();
 	}
@@ -132,24 +146,33 @@
 	});
 	filter.addEventListener('change', render);
 
+	if (!Number.isSafeInteger(predictionId) || predictionId <= 0) {
+		showError('A valid prediction was not selected. Return to your dashboard and open a prediction first.');
+		return;
+	}
+
 	if (!window.FinpathAPI.getToken()) {
-		window.location.href = '/login?next=/recommendations';
+		window.location.href = loginHref();
 		return;
 	}
 	window.FinpathAPI.me().then(function () {
-		return window.FinpathAPI.listRecommendations();
+		return window.FinpathAPI.listRecommendationsForPrediction(predictionId);
 	}).then(function (result) {
+		if (!Array.isArray(result)) throw new Error('The recommendations response was invalid. Please try again.');
 		recommendations = Array.isArray(result) ? result : [];
 		state = recommendations.reduce(function (result, item) { result[item.id] = { completed: false, saved: false, details: false }; return result; }, {});
 		setFilterOptions();
 		document.querySelector('.demo-pill').textContent = 'Live recommendations';
 		document.querySelector('.demo-notice').hidden = true;
 		document.getElementById('demo-insight').hidden = true;
-		document.querySelector('.summary-note').textContent = 'From your latest predictions';
+		document.querySelector('.summary-note').textContent = 'For this prediction';
 		document.getElementById('list-heading').textContent = 'Your recommendations';
 		render();
 	}).catch(function (reason) {
-		if (reason && reason.status === 401) { window.location.href = '/login?next=/recommendations'; return; }
-		showError(reason && reason.message ? reason.message : 'We could not load your recommendations. Please try again.');
+		if (reason && reason.status === 401) { window.location.href = loginHref(); return; }
+		showError(
+			reason && reason.message ? reason.message : 'We could not load your recommendations. Please try again.',
+			'prediction.html?prediction_id=' + encodeURIComponent(predictionId)
+		);
 	});
 }());

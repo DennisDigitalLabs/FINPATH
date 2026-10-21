@@ -104,6 +104,7 @@
 		getPrediction: function (id) { return get('/api/v1/predictions/' + encodeURIComponent(id)); },
 		listPredictions: function (assessmentId) { return get('/api/v1/assessments/' + encodeURIComponent(assessmentId) + '/predictions'); },
 		listRecommendations: function () { return get('/api/v1/recommendations'); },
+		listRecommendationsForPrediction: function (predictionId) { return get('/api/v1/recommendations/by-prediction/' + encodeURIComponent(predictionId)); },
 		getRecommendation: function (id) { return get('/api/v1/recommendations/' + encodeURIComponent(id)); },
 		getDashboard: function () { return get('/api/v1/dashboard'); },
 		getAnalytics: function () { return get('/api/v1/analytics'); },

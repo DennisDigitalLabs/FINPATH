@@ -77,7 +77,7 @@
 			clearError(loginError);
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
-			var allowedDestinations = ['/admin', '/dashboard', '/analytics'];
+			var allowedDestinations = ['/admin', '/dashboard', '/analytics', '/recommendations'];
 			var requestedDestination = new URLSearchParams(window.location.search).get('next');
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
 				.then(function () { return window.FinpathAPI.me(); })
@@ -85,6 +85,13 @@
 					var isAdmin = user && user.role === 'admin';
 					var fallback = isAdmin ? '/admin' : '/dashboard';
 					var destination = allowedDestinations.indexOf(requestedDestination) !== -1 ? requestedDestination : fallback;
+					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations\?prediction_id=(\d+)$/);
+					if (recommendationDestination && Number.isSafeInteger(Number(recommendationDestination[1])) && Number(recommendationDestination[1]) > 0) {
+						destination = '/recommendations?prediction_id=' + recommendationDestination[1];
+					}
+					else if (requestedDestination && requestedDestination.indexOf('/recommendations') === 0) {
+						destination = fallback;
+					}
 					if (destination === '/admin' && !isAdmin) destination = fallback;
 					window.location.href = destination;
 				})

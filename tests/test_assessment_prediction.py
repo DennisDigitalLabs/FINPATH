@@ -9,6 +9,7 @@ from sqlalchemy.pool import StaticPool
 from backend.database import Base
 from backend.dependencies import get_db
 from backend.main import app
+from backend.models import Prediction
 from backend.schemas.prediction import PredictionCreate
 from backend.routes import prediction as prediction_route
 from backend.services.prediction_service import PredictionService, RealFinpathPredictor
@@ -246,6 +247,71 @@ def test_real_model_prediction_accepts_legitimately_omitted_conditional_fields(m
 
     assert response.status_code == 201, response.json()
     assert response.json()["assessment_id"] > 0
+
+
+def test_real_model_prediction_is_persisted_and_retrievable_by_owner(monkeypatch):
+    token = register_and_login("real-model-retrieval@example.com")
+    generated = create_real_prediction(
+        token,
+        complete_ml_assessment_data("No", "No"),
+        monkeypatch,
+    )
+
+    assert generated.status_code == 201, generated.json()
+    generated_data = generated.json()
+    prediction_id = generated_data["id"]
+    assessment_id = generated_data["assessment_id"]
+    assert isinstance(prediction_id, int) and prediction_id > 0
+    assert {
+        "id",
+        "assessment_id",
+        "risk_level",
+        "risk_category",
+        "probability",
+        "confidence",
+        "explanation",
+        "contributing_factors",
+        "model_version",
+        "prediction_timestamp",
+        "created_at",
+    } <= generated_data.keys()
+
+    db = TestSessionLocal()
+    try:
+        persisted = db.get(Prediction, prediction_id)
+        assert persisted is not None
+        assert persisted.assessment_id == assessment_id
+        assert persisted.risk_level == generated_data["risk_level"]
+        assert persisted.risk_category == generated_data["risk_category"]
+        assert persisted.probability == generated_data["probability"]
+        assert persisted.confidence == generated_data["confidence"]
+        assert persisted.explanation == generated_data["explanation"]
+        assert persisted.contributing_factors == generated_data["contributing_factors"]
+        assert persisted.model_version == generated_data["model_version"]
+    finally:
+        db.close()
+
+    user = client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert user.status_code == 200
+
+    assessment = client.get(
+        f"/api/v1/assessments/{assessment_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert assessment.status_code == 200
+    assert assessment.json()["user_id"] == user.json()["id"]
+
+    retrieved = client.get(
+        f"/api/v1/predictions/{prediction_id}",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert retrieved.status_code == 200
+    assert retrieved.json() == generated_data
+    assert retrieved.json()["id"] == prediction_id
+    assert retrieved.json()["assessment_id"] == assessment_id
 
 
 def test_real_mapper_rejects_missing_required_assessment_data_with_409(monkeypatch):
