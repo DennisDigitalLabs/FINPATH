@@ -25,20 +25,20 @@ def test_security_headers_are_present_on_api_responses():
     assert response.headers["Content-Security-Policy"] == "default-src 'none'; frame-ancestors 'none'"
 
 
-def test_cors_allows_configured_origin_and_restricts_headers_and_methods():
+def test_cors_allows_configured_origin_and_admin_status_updates():
     response = client.options(
-        "/health",
+        "/api/v1/admin/users/1/status",
         headers={
             "Origin": "http://localhost:3000",
-            "Access-Control-Request-Method": "GET",
-            "Access-Control-Request-Headers": "Authorization",
+            "Access-Control-Request-Method": "PATCH",
+            "Access-Control-Request-Headers": "Authorization, Content-Type",
         },
     )
 
     assert response.status_code == 200
     assert response.headers["access-control-allow-origin"] == "http://localhost:3000"
     assert "Authorization" in response.headers["access-control-allow-headers"]
-    assert "PATCH" not in response.headers["access-control-allow-methods"]
+    assert "PATCH" in response.headers["access-control-allow-methods"]
 
 
 def test_production_rejects_debug_and_wildcard_cors():

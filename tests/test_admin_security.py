@@ -255,6 +255,14 @@ def test_admin_access_fails_closed_when_owner_is_not_configured(client, db, monk
         headers={"Authorization": f"Bearer {token}"},
     )
     assert response.status_code == 503
+    assert client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 503
+    assert client.get(
+        "/api/v1/admin/health",
+        headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 503
 
 
 def test_inactive_admin_cannot_login_or_use_admin_endpoint(client, db, monkeypatch):
@@ -373,3 +381,200 @@ def test_admin_limit_migration_blocks_third_and_reactivation(monkeypatch):
         db.close()
         Base.metadata.drop_all(bind=migration_engine)
         migration_engine.dispose()
+
+
+def test_admin_user_search_is_paginated_and_never_returns_credentials(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    token = _login(client, admin.email, "OwnerPassword123")
+    db.add_all([
+        User(
+            full_name="Search Match One",
+            email="match-one@example.com",
+            hashed_password=hash_password("MatchPassword123"),
+            role="user",
+            is_active=True,
+        ),
+        User(
+            full_name="Search Match Two",
+            email="match-two@example.com",
+            hashed_password=hash_password("MatchPassword123"),
+            role="user",
+            is_active=False,
+        ),
+        User(
+            full_name="Other Person",
+            email="other@example.com",
+            hashed_password=hash_password("OtherPassword123"),
+            role="user",
+            is_active=True,
+        ),
+    ])
+    db.commit()
+    headers = {"Authorization": f"Bearer {token}"}
+
+    response = client.get(
+        "/api/v1/admin/users",
+        params={"search": "match", "page": 1, "page_size": 1},
+        headers=headers,
+    )
+    assert response.status_code == 200
+    payload = response.json()
+    assert payload["total"] == 2
+    assert payload["page"] == 1
+    assert payload["page_size"] == 1
+    assert len(payload["items"]) == 1
+    assert "hashed_password" not in payload["items"][0]
+    assert "password" not in payload["items"][0]
+
+    second_page = client.get(
+        "/api/v1/admin/users",
+        params={"search": "match", "page": 2, "page_size": 1},
+        headers=headers,
+    )
+    assert second_page.status_code == 200
+    assert second_page.json()["total"] == 2
+    assert second_page.json()["items"][0]["id"] != payload["items"][0]["id"]
+    assert client.get(
+        "/api/v1/admin/users",
+        params={"page_size": 101},
+        headers=headers,
+    ).status_code == 422
+
+
+def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    target = User(
+        full_name="Managed User",
+        email="managed@example.com",
+        hashed_password=hash_password("ManagedPassword123"),
+        role="user",
+        is_active=True,
+    )
+    other_admin = User(
+        full_name="Other Admin",
+        email="other-admin@example.com",
+        hashed_password=hash_password("OtherAdminPassword123"),
+        role="admin",
+        is_active=True,
+    )
+    db.add_all([target, other_admin])
+    db.commit()
+    headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
+
+    deactivated = client.patch(
+        f"/api/v1/admin/users/{target.id}/status",
+        json={"is_active": False},
+        headers=headers,
+    )
+    assert deactivated.status_code == 200
+    assert deactivated.json()["is_active"] is False
+    assert "hashed_password" not in deactivated.json()
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": target.email, "password": "ManagedPassword123"},
+    ).status_code == 401
+
+    reactivated = client.patch(
+        f"/api/v1/admin/users/{target.id}/status",
+        json={"is_active": True},
+        headers=headers,
+    )
+    assert reactivated.status_code == 200
+    assert reactivated.json()["is_active"] is True
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": target.email, "password": "ManagedPassword123"},
+    ).status_code == 200
+
+    assert client.patch(
+        f"/api/v1/admin/users/{admin.id}/status",
+        json={"is_active": False},
+        headers=headers,
+    ).status_code == 409
+    assert client.patch(
+        f"/api/v1/admin/users/{other_admin.id}/status",
+        json={"is_active": False},
+        headers=headers,
+    ).status_code == 409
+    assert client.patch(
+        "/api/v1/admin/users/999999/status",
+        json={"is_active": False},
+        headers=headers,
+    ).status_code == 404
+    assert client.patch(
+        f"/api/v1/admin/users/{target.id}/status",
+        json={"is_active": "false"},
+        headers=headers,
+    ).status_code == 422
+
+
+def test_all_admin_routes_require_owner_authorization(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    owner_headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
+    normal_user = User(
+        full_name="Normal User",
+        email="normal-admin-test@example.com",
+        hashed_password=hash_password("NormalPassword123"),
+        role="user",
+        is_active=True,
+    )
+    db.add(normal_user)
+    other_admin = User(
+        full_name="Different Admin",
+        email="different-admin@example.com",
+        hashed_password=hash_password("DifferentAdmin123"),
+        role="admin",
+        is_active=True,
+    )
+    db.add(other_admin)
+    db.commit()
+    user_headers = {"Authorization": f"Bearer {_login(client, normal_user.email, 'NormalPassword123')}"}
+    other_admin_headers = {
+        "Authorization": f"Bearer {_login(client, other_admin.email, 'DifferentAdmin123')}"
+    }
+    routes = [
+        ("get", "/api/v1/admin/users", None),
+        ("get", "/api/v1/admin/health", None),
+        ("patch", f"/api/v1/admin/users/{normal_user.id}/status", {"is_active": True}),
+    ]
+    for method, path, body in routes:
+        request = getattr(client, method)
+        kwargs = {"headers": owner_headers}
+        if body is not None:
+            kwargs["json"] = body
+        assert request(path, **kwargs).status_code == 200
+
+        kwargs["headers"] = user_headers
+        assert request(path, **kwargs).status_code == 403
+        kwargs["headers"] = other_admin_headers
+        assert request(path, **kwargs).status_code == 403
+        kwargs.pop("headers")
+        assert request(path, **kwargs).status_code == 401
+
+
+def test_admin_health_reports_database_failure_without_leaking_details(client, db, monkeypatch):
+    from sqlalchemy.exc import OperationalError
+
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
+    response = client.get("/api/v1/admin/health", headers=headers)
+    assert response.status_code == 200
+    assert response.json()["status"] == "healthy"
+    assert response.json()["database"] == "available"
+
+    original_execute = db.execute
+
+    def fail_health_query(statement, *args, **kwargs):
+        if str(statement) == "SELECT 1":
+            raise OperationalError("SELECT 1", {}, Exception("sensitive connection detail"))
+        return original_execute(statement, *args, **kwargs)
+
+    monkeypatch.setattr(db, "execute", fail_health_query)
+    failed = client.get("/api/v1/admin/health", headers=headers)
+    assert failed.status_code == 503
+    assert failed.json()["detail"] == "Database health check failed"
+    assert "sensitive connection detail" not in failed.text

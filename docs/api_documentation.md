@@ -66,6 +66,17 @@ Provides user-oriented financial risk and assessment information for dashboard p
 
 Provides aggregated information required by the analytics interface.
 
+- `GET /api/v1/analytics/system` returns the existing system totals and distributions and requires configured administrator-owner authorization.
+
+### Administration
+
+Every endpoint in this section requires a bearer token for an active account whose role is `admin` and whose email matches `ADMIN_OWNER_EMAIL`. If the owner setting is missing, administrator endpoints fail closed with `503`. The configured owner must be provisioned through the trusted `python -m backend.create_admin` command described above.
+
+- `GET /api/v1/admin/users` lists account summaries. Optional `search` matches full name or email; `page` defaults to `1`, and `page_size` defaults to `10` with a maximum of `100`. The response contains `items`, `total`, `page`, and `page_size`. Password hashes and credentials are never included.
+- `PATCH /api/v1/admin/users/{user_id}/status` takes `{"is_active": true}` or `{"is_active": false}` and persists the account's active status. Deactivation prevents subsequent authentication. It does not change account roles; administrator accounts cannot be managed by this endpoint. Missing users return `404`; protected administrator accounts return `409`.
+- `GET /api/v1/admin/health` performs a database connectivity query and returns backend/database status and check time. A failed database check returns `503` without exposing connection details.
+
+The admin dashboard uses the protected system analytics endpoint and these three administration endpoints. Account search is paginated, and active status can be changed and reversed. No user deletion, password reset, role escalation, or admin provisioning is exposed through the dashboard.
 ## Error Handling
 
 The API uses standard HTTP status codes and structured JSON responses. Authentication and authorization failures are rejected appropriately, while invalid input is handled through Pydantic validation.

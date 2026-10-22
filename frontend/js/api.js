@@ -116,7 +116,21 @@
 		getRecommendation: function (id) { return get('/api/v1/recommendations/' + encodeURIComponent(id)); },
 		getDashboard: function () { return get('/api/v1/dashboard'); },
 		getAnalytics: function () { return get('/api/v1/analytics'); },
-		getSystemAnalytics: function () { return get('/api/v1/analytics/system'); }
+		getSystemAnalytics: function () { return get('/api/v1/analytics/system'); },
+		getAdminHealth: function () { return get('/api/v1/admin/health'); },
+		listAdminUsers: function (search, page, pageSize) {
+			var params = new URLSearchParams();
+			if (search) params.set('search', search);
+			params.set('page', String(page || 1));
+			params.set('page_size', String(pageSize || 10));
+			return get('/api/v1/admin/users?' + params.toString());
+		},
+		setAdminUserActive: function (id, isActive) {
+			return request('/api/v1/admin/users/' + encodeURIComponent(id) + '/status', {
+				method: 'PATCH',
+				body: { is_active: isActive }
+			});
+		}
 	};
 
 	window.FinpathAPI = api;

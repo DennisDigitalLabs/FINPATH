@@ -21,6 +21,7 @@ from backend.routes.prediction import router as prediction_router
 from backend.routes.recommendation import router as recommendation_router
 from backend.routes.dashboard import router as dashboard_router
 from backend.routes.analytics import router as analytics_router
+from backend.routes.admin import router as admin_router
 
 # Get settings
 settings = get_settings()
@@ -64,7 +65,14 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.CORS_ORIGINS,
     allow_credentials=True,
-    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+    allow_methods=[
+        "GET",
+        "POST",
+        "PUT",
+        "PATCH",
+        "DELETE",
+        "OPTIONS",
+    ],
     allow_headers=["Authorization", "Content-Type", "Idempotency-Key"],
 )
 
@@ -100,6 +108,7 @@ app.include_router(prediction_router)
 app.include_router(recommendation_router)
 app.include_router(dashboard_router)
 app.include_router(analytics_router)
+app.include_router(admin_router)
 
 
 @app.get("/", tags=["root"])
