@@ -44,6 +44,7 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     ADMIN_OWNER_EMAIL: str = ""
+    ADMIN_BOOTSTRAP_TOKEN: str = ""
 
     # Password reset and email delivery configuration
     FRONTEND_URL: str = "https://finpath-1afl.onrender.com"
@@ -86,6 +87,13 @@ class Settings(BaseSettings):
     @classmethod
     def normalize_admin_owner_email(cls, value: str) -> str:
         return value.strip().lower()
+
+    @field_validator("ADMIN_BOOTSTRAP_TOKEN")
+    @classmethod
+    def validate_admin_bootstrap_token(cls, value: str) -> str:
+        if value and len(value) < 32:
+            raise ValueError("ADMIN_BOOTSTRAP_TOKEN must contain at least 32 characters")
+        return value
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

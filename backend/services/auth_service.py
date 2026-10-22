@@ -3,6 +3,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 
 from jose import JWTError, jwt
+from sqlalchemy import func
 from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
@@ -17,7 +18,11 @@ def normalize_email(email: str) -> str:
 
 
 def get_user_by_email(db: Session, email: str) -> User | None:
-	return db.query(User).filter(User.email == normalize_email(email)).first()
+	return (
+		db.query(User)
+		.filter(func.lower(User.email) == normalize_email(email))
+		.first()
+	)
 
 
 def register_user(db: Session, user_data: UserCreate) -> User:

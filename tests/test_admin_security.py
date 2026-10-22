@@ -19,6 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend import create_admin as admin_cli
 from backend import dependencies as auth_dependencies
+from backend.services import admin_bootstrap_service
 from backend.database import Base, SessionLocal, engine
 from backend.dependencies import get_db
 from backend.main import app
@@ -67,10 +68,14 @@ def _create_admin(db, email, password):
 
 
 def _configure_admin_owner(monkeypatch, email):
-    settings = SimpleNamespace(ADMIN_OWNER_EMAIL=email.strip().lower())
+    settings = SimpleNamespace(
+        ADMIN_OWNER_EMAIL=email.strip().lower(),
+        ADMIN_BOOTSTRAP_TOKEN="test-only-bootstrap-token-with-32-chars",
+    )
     monkeypatch.setattr(auth_dependencies, "get_settings", lambda: settings)
     monkeypatch.setattr(auth_service, "get_settings", lambda: settings)
     monkeypatch.setattr(admin_cli, "get_settings", lambda: settings)
+    monkeypatch.setattr(admin_bootstrap_service, "get_settings", lambda: settings)
 
 
 def _login(client, email, password):
@@ -131,7 +136,11 @@ def test_first_admin_cli_creates_hashed_admin_that_can_login_and_access_admin_en
 ):
     _configure_admin_owner(monkeypatch, "first-admin@example.com")
     inputs = iter(["first-admin@example.com", "First Admin"])
-    passwords = iter(["FirstAdmin123", "FirstAdmin123"])
+    passwords = iter([
+        "test-only-bootstrap-token-with-32-chars",
+        "FirstAdmin123",
+        "FirstAdmin123",
+    ])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
     monkeypatch.setattr(admin_cli, "getpass", lambda _prompt: next(passwords))
 
@@ -143,41 +152,71 @@ def test_first_admin_cli_creates_hashed_admin_that_can_login_and_access_admin_en
     assert admin.hashed_password != "FirstAdmin123"
     assert verify_password("FirstAdmin123", admin.hashed_password)
 
-    token = _login(client, "first-admin@example.com", "FirstAdmin123")
+    token = _login(client, "FIRST-ADMIN@EXAMPLE.COM", "FirstAdmin123")
     claims = decode_access_token(token)
     assert claims["sub"] == str(admin.id)
     assert claims["role"] == "admin"
     response = client.get("/api/v1/analytics/system", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
+    admin_users_response = client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert admin_users_response.status_code == 200
 
-    repeat_inputs = iter(["second-admin@example.com", "Second Admin"])
-    repeat_passwords = iter(["SecondAdmin123", "SecondAdmin123"])
+    repeat_inputs = iter(["first-admin@example.com"])
+    repeat_passwords = iter(["test-only-bootstrap-token-with-32-chars"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(repeat_inputs))
     monkeypatch.setattr(admin_cli, "getpass", lambda _prompt: next(repeat_passwords))
     assert admin_cli.main() == 1
     assert count_admin_users(db) == 1
 
 
-def test_admin_cli_promotes_only_the_confirmed_configured_owner(client, db, monkeypatch):
+@pytest.mark.parametrize(
+    ("existing_role", "is_active"),
+    [("user", False), ("admin", False), ("user", True)],
+)
+def test_admin_cli_repairs_only_the_configured_owner_after_explicit_confirmation(
+    client,
+    db,
+    monkeypatch,
+    existing_role,
+    is_active,
+):
     _configure_admin_owner(monkeypatch, "owner@example.com")
-    register_user(
-        db,
-        UserCreate(full_name="Owner", email="owner@example.com", password="OwnerPassword123"),
-    )
-    inputs = iter(["owner@example.com", "yes"])
+    db.add(User(
+        full_name="Owner",
+        email="OWNER@EXAMPLE.COM",
+        hashed_password=hash_password("OwnerPassword123"),
+        role=existing_role,
+        is_active=is_active,
+    ))
+    db.commit()
+    inputs = iter(["owner@example.com", "REPAIR OWNER", ""])
+    passwords = iter([
+        "test-only-bootstrap-token-with-32-chars",
+        "OwnerReset123",
+        "OwnerReset123",
+    ])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+    monkeypatch.setattr(admin_cli, "getpass", lambda _prompt: next(passwords))
 
     assert admin_cli.main() == 0
     db.expire_all()
     owner = db.query(User).filter(User.email == "owner@example.com").one()
     assert owner.role == "admin"
+    assert owner.is_active is True
 
-    token = _login(client, owner.email, "OwnerPassword123")
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": owner.email, "password": "OwnerPassword123"},
+    ).status_code == 401
+    token = _login(client, owner.email, "OwnerReset123")
     response = client.get("/api/v1/analytics/system", headers={"Authorization": f"Bearer {token}"})
     assert response.status_code == 200
 
 
-def test_admin_cli_requires_explicit_confirmation_to_revoke_other_admins(db, monkeypatch):
+def test_admin_cli_does_not_revoke_other_admins_during_bootstrap(db, monkeypatch):
     _configure_admin_owner(monkeypatch, "owner@example.com")
     owner = register_user(
         db,
@@ -192,13 +231,34 @@ def test_admin_cli_requires_explicit_confirmation_to_revoke_other_admins(db, mon
     )
     db.add(other_admin)
     db.commit()
-    inputs = iter(["owner@example.com", "REVOKE", "yes"])
+    inputs = iter(["owner@example.com", "Owner", ""])
+    passwords = iter([
+        "test-only-bootstrap-token-with-32-chars",
+        "OwnerPassword123",
+        "OwnerPassword123",
+    ])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+    monkeypatch.setattr(admin_cli, "getpass", lambda _prompt: next(passwords))
 
-    assert admin_cli.main() == 0
+    assert admin_cli.main() == 1
     db.expire_all()
-    assert db.get(User, owner.id).role == "admin"
-    assert db.get(User, other_admin.id).role == "user"
+    assert db.get(User, owner.id).role == "user"
+    assert db.get(User, other_admin.id).role == "admin"
+
+
+def test_admin_bootstrap_rejects_wrong_email_and_bootstrap_token(db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    inputs = iter(["attacker@example.com"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+    assert admin_cli.main() == 1
+    assert db.query(User).count() == 0
+
+    inputs = iter(["owner@example.com"])
+    passwords = iter(["incorrect-bootstrap-token"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+    monkeypatch.setattr(admin_cli, "getpass", lambda _prompt: next(passwords))
+    assert admin_cli.main() == 1
+    assert db.query(User).count() == 0
 
 
 def test_only_configured_admin_owner_can_access_admin_api_and_admin_creation_is_disabled(
@@ -463,6 +523,9 @@ def test_admin_can_create_standard_user_account_that_can_sign_in(client, db, mon
     assert created["role"] == "user"
     assert created["is_active"] is True
     assert "hashed_password" not in created
+    created_user = db.get(User, created["id"])
+    assert created_user.hashed_password != "CreatedUser123"
+    assert verify_password("CreatedUser123", created_user.hashed_password)
     assert client.post(
         "/api/v1/auth/login",
         json={"email": "created@example.com", "password": "CreatedUser123"},

@@ -68,6 +68,16 @@ def test_example_secret_key_placeholder_is_rejected():
         )
 
 
+def test_short_admin_bootstrap_token_is_rejected():
+    with pytest.raises(ValidationError):
+        Settings(
+            ENVIRONMENT="testing",
+            DEBUG=False,
+            SECRET_KEY="x" * 40,
+            ADMIN_BOOTSTRAP_TOKEN="too-short",
+        )
+
+
 def test_malformed_stored_password_hash_fails_closed():
     assert verify_password("password", "not-a-valid-password-hash") is False
 
