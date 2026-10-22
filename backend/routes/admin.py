@@ -16,7 +16,9 @@ from backend.schemas.admin import (
 	AdminUserResponse,
 	AdminUserStatusUpdate,
 )
+from backend.schemas.user import AdminCreate
 from backend.services.admin_service import (
+	create_admin_account,
 	create_standard_user,
 	list_admin_users,
 	update_user_active_status,
@@ -49,6 +51,25 @@ def create_user(
 		raise HTTPException(
 			status_code=status.HTTP_409_CONFLICT,
 			detail="An account with this email already exists",
+		) from exc
+
+
+@router.post(
+	"/admins",
+	response_model=AdminUserResponse,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_admin(
+	admin_data: AdminCreate,
+	db: Session = Depends(get_db),
+	_admin: User = Depends(get_current_admin),
+) -> User:
+	try:
+		return create_admin_account(db, admin_data)
+	except ValueError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail=str(exc),
 		) from exc
 
 

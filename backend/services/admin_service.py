@@ -1,13 +1,54 @@
 from sqlalchemy import func, or_
+from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.models import User
-from backend.schemas.user import UserCreate
-from backend.services.auth_service import register_user
+from backend.schemas.user import AdminCreate, UserCreate
+from backend.security import hash_password
+from backend.services.auth_service import (
+	count_admin_users,
+	get_user_by_email,
+	register_user,
+)
+
+
+ADMIN_LIMIT_MESSAGE = (
+	"The maximum of 2 active administrator accounts has been reached. "
+	"Please contact the system administrator."
+)
 
 
 def create_standard_user(db: Session, user_data: UserCreate) -> User:
 	return register_user(db, user_data)
+
+
+def create_admin_account(db: Session, admin_data: AdminCreate) -> User:
+	email = str(admin_data.email).strip().lower()
+	if get_user_by_email(db, email) is not None:
+		raise ValueError("An account with this email already exists")
+	if count_admin_users(db) >= 2:
+		raise ValueError(ADMIN_LIMIT_MESSAGE)
+
+	user = User(
+		full_name=admin_data.full_name,
+		email=email,
+		hashed_password=hash_password(admin_data.password),
+		role="admin",
+		is_active=True,
+	)
+	db.add(user)
+	try:
+		db.commit()
+	except DBAPIError as exc:
+		db.rollback()
+		message = str(exc.orig).lower()
+		if "maximum of two active admin accounts exceeded" in message:
+			raise ValueError(ADMIN_LIMIT_MESSAGE) from exc
+		if isinstance(exc, IntegrityError):
+			raise ValueError("An account with this email already exists") from exc
+		raise
+	db.refresh(user)
+	return user
 
 
 def list_admin_users(

@@ -19,7 +19,7 @@ from sqlalchemy.pool import StaticPool
 
 from backend import create_admin as admin_cli
 from backend import dependencies as auth_dependencies
-from backend.services import admin_bootstrap_service
+from backend.services import admin_bootstrap_service, admin_service
 from backend.database import Base, SessionLocal, engine
 from backend.dependencies import get_db
 from backend.main import app
@@ -95,6 +95,7 @@ def test_public_registration_creates_normal_user(db):
     )
 
     assert user.role == "user"
+
 
 def test_count_admin_users_counts_only_active_admins(db):
     db.add_all([
@@ -261,7 +262,7 @@ def test_admin_bootstrap_rejects_wrong_email_and_bootstrap_token(db, monkeypatch
     assert db.query(User).count() == 0
 
 
-def test_only_configured_admin_owner_can_access_admin_api_and_admin_creation_is_disabled(
+def test_admins_can_create_standard_users_and_owner_can_create_second_admin(
     client, db, monkeypatch
 ):
     _configure_admin_owner(monkeypatch, "first@example.com")
@@ -274,30 +275,92 @@ def test_only_configured_admin_owner_can_access_admin_api_and_admin_creation_is_
         json={"full_name": "Normal User", "email": "user@example.com", "password": "NormalUser123"},
     )
     assert user_response.status_code == 201
-    user_token = _login(client, "user@example.com", "NormalUser123")
-    assert client.get(
-        "/api/v1/analytics/system",
-        headers={"Authorization": f"Bearer {user_token}"},
-    ).status_code == 403
-
-    other_admin = User(
-        full_name="Other Admin",
-        email="other-admin@example.com",
-        hashed_password=hash_password("OtherAdmin123"),
-        role="admin",
-        is_active=True,
-    )
-    db.add(other_admin)
-    db.commit()
-    other_token = _login(client, other_admin.email, "OtherAdmin123")
-
-    assert client.get(
-        "/api/v1/analytics/system",
-        headers={"Authorization": f"Bearer {other_token}"},
-    ).status_code == 403
     assert client.get("/api/v1/analytics/system", headers=owner_headers).status_code == 200
-    assert client.post("/api/v1/auth/admins", json={}).status_code == 404
+
+    forged_role = client.post(
+        "/api/v1/admin/users",
+        headers=owner_headers,
+        json={
+            "full_name": "Forged Admin",
+            "email": "forged@example.com",
+            "password": "ForgedUser123",
+            "role": "admin",
+        },
+    )
+    assert forged_role.status_code == 422
+
+    second_admin_response = client.post(
+        "/api/v1/admin/admins",
+        headers=owner_headers,
+        json={
+            "full_name": "Second Admin",
+            "email": "second@example.com",
+            "password": "SecondAdmin123",
+        },
+    )
+    assert second_admin_response.status_code == 201
+    assert second_admin_response.json()["role"] == "admin"
+    assert "hashed_password" not in second_admin_response.json()
+    second_admin = db.query(User).filter(User.email == "second@example.com").one()
+    assert second_admin.hashed_password != "SecondAdmin123"
+    assert verify_password("SecondAdmin123", second_admin.hashed_password)
+    second_token = _login(client, second_admin.email, "SecondAdmin123")
+    second_headers = {"Authorization": f"Bearer {second_token}"}
+    assert client.get("/api/v1/admin/users", headers=second_headers).status_code == 200
+
+    third_admin_response = client.post(
+        "/api/v1/admin/admins",
+        headers=owner_headers,
+        json={
+            "full_name": "Third Admin",
+            "email": "third@example.com",
+            "password": "ThirdAdmin123",
+        },
+    )
+    assert third_admin_response.status_code == 409
+    assert "maximum of 2 active administrator accounts" in third_admin_response.json()["detail"]
+    assert "contact the system administrator" in third_admin_response.json()["detail"]
+    ordinary_registration = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "After Limit User",
+            "email": "after-limit@example.com",
+            "password": "AfterLimit123",
+        },
+    )
+    assert ordinary_registration.status_code == 201
+    assert ordinary_registration.json()["role"] == "user"
     assert count_admin_users(db) == 2
+
+
+def test_admin_creation_requires_authentication_and_admin_role(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    _create_admin(db, "owner@example.com", "OwnerPassword123")
+    user_response = client.post(
+        "/api/v1/auth/register",
+        json={
+            "full_name": "Normal User",
+            "email": "normal@example.com",
+            "password": "NormalUser123",
+        },
+    )
+    assert user_response.status_code == 201
+    user_token = _login(client, "normal@example.com", "NormalUser123")
+    admin_data = {
+        "full_name": "Unauthorized Admin",
+        "email": "unauthorized@example.com",
+        "password": "Unauthorized123",
+    }
+
+    assert client.post("/api/v1/admin/admins", json=admin_data).status_code == 401
+    response = client.post(
+        "/api/v1/admin/admins",
+        headers={"Authorization": f"Bearer {user_token}"},
+        json=admin_data,
+    )
+    assert response.status_code == 403
+    assert count_admin_users(db) == 1
+    assert db.query(User).filter(User.email == "unauthorized@example.com").count() == 0
 
 
 def test_admin_access_fails_closed_when_owner_is_not_configured(client, db, monkeypatch):
@@ -436,6 +499,22 @@ def test_admin_limit_migration_blocks_third_and_reactivation(monkeypatch):
             db.query(User).filter(User.id == first.id).update({"is_active": True})
             db.commit()
         db.rollback()
+        assert auth_service.count_admin_users(db) == 2
+
+        with monkeypatch.context() as scoped_patch:
+            scoped_patch.setattr(admin_service, "count_admin_users", lambda _session: 1)
+            with pytest.raises(
+                ValueError,
+                match="maximum of 2 active administrator accounts has been reached",
+            ):
+                admin_service.create_admin_account(
+                    db,
+                    AdminCreate(
+                        full_name="Simultaneous Third Admin",
+                        email="simultaneous-third@example.com",
+                        password="Concurrent123",
+                    ),
+                )
         assert auth_service.count_admin_users(db) == 2
     finally:
         db.close()
@@ -619,7 +698,7 @@ def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, 
     ).status_code == 422
 
 
-def test_all_admin_routes_require_owner_authorization(client, db, monkeypatch):
+def test_all_admin_routes_require_admin_authorization(client, db, monkeypatch):
     _configure_admin_owner(monkeypatch, "owner@example.com")
     admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
     owner_headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
@@ -665,7 +744,8 @@ def test_all_admin_routes_require_owner_authorization(client, db, monkeypatch):
         kwargs["headers"] = user_headers
         assert request(path, **kwargs).status_code == 403
         kwargs["headers"] = other_admin_headers
-        assert request(path, **kwargs).status_code == 403
+        admin_expected = 409 if method == "post" else 200
+        assert request(path, **kwargs).status_code == admin_expected
         kwargs.pop("headers")
         assert request(path, **kwargs).status_code == 401
 

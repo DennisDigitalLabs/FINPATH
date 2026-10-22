@@ -17,7 +17,7 @@
 		<div class="top-nav-links"><a class="nav-link active" href="/admin" aria-current="page">Admin dashboard</a><a class="nav-link" href="/">Home</a><button class="nav-link nav-button" id="admin-logout" type="button">Log out</button></div>
 	</div></nav></header>
 	<main id="main-content"><div class="container admin-layout">
-		<aside class="admin-sidebar" aria-label="Admin navigation"><div class="sidebar-label">Administration</div><nav class="side-nav"><a class="side-link active" href="#overview-section"><span aria-hidden="true">▦</span>Overview</a><a class="side-link" href="#health-section"><span aria-hidden="true">●</span>System health</a><a class="side-link" href="#users-section"><span aria-hidden="true">○</span>User management</a></nav><div class="sidebar-note"><strong>Protected administration</strong><small>Only the configured owner can access these controls.</small></div></aside>
+		<aside class="admin-sidebar" aria-label="Admin navigation"><div class="sidebar-label">Administration</div><nav class="side-nav"><a class="side-link active" href="#overview-section"><span aria-hidden="true">▦</span>Overview</a><a class="side-link" href="#health-section"><span aria-hidden="true">●</span>System health</a><a class="side-link" href="#users-section"><span aria-hidden="true">○</span>User management</a></nav><div class="sidebar-note"><strong>Protected administration</strong><small>Access is limited to active administrator accounts.</small></div></aside>
 		<section class="admin-content" aria-labelledby="admin-title">
 			<section class="admin-intro"><div><p class="eyebrow">Operations overview</p><h1 id="admin-title">Admin dashboard</h1><p>Monitor available system totals, service health, and user account status.</p></div><div><button class="btn btn-outline" id="refresh-admin" type="button">Refresh data</button></div></section>
 			<div class="admin-notice" id="admin-state" role="status" aria-live="polite">Loading administration data…</div>
@@ -42,6 +42,17 @@
 					<p class="admin-create-user-help">Creates a standard user account. Passwords must contain at least one letter and one number.</p>
 					<button class="btn btn-primary" id="create-user-submit" type="submit">Create account</button>
 					<p class="admin-create-user-state" id="create-user-state" role="status" aria-live="polite"></p>
+				</form>
+				<form id="create-admin-form" class="admin-create-user">
+					<h3>Create an administrator account</h3>
+					<div class="admin-create-user-fields">
+						<label>Full name<input name="full_name" type="text" maxlength="255" autocomplete="name" required></label>
+						<label>Email<input name="email" type="email" maxlength="255" autocomplete="email" required></label>
+						<label>Password<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+					</div>
+					<p class="admin-create-user-help">Only two active administrator accounts are allowed. New administrators can access the protected dashboard.</p>
+					<button class="btn btn-primary" id="create-admin-submit" type="submit">Create administrator</button>
+					<p class="admin-create-user-state" id="create-admin-state" role="status" aria-live="polite"></p>
 				</form>
 				<form id="user-search-form" class="admin-search"><label for="user-search">Search name or email</label><input id="user-search" name="search" type="search" maxlength="100" autocomplete="off"><button class="btn btn-primary" type="submit">Search</button><button class="btn btn-outline" id="clear-user-search" type="button">Clear</button></form>
 				<div id="user-list-state" class="admin-empty-copy" role="status" aria-live="polite">Loading accounts…</div>

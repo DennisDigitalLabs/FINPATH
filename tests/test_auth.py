@@ -11,11 +11,11 @@ from sqlalchemy.pool import StaticPool
 
 from backend.config import get_settings
 from backend.database import Base
-from backend.dependencies import get_current_admin, get_db, get_current_user
+from backend.dependencies import get_current_admin, get_db
 from backend.main import app
 from backend.models import User
 from backend.routes import auth as auth_routes
-from backend.security import create_access_token, hash_password, verify_password
+from backend.security import create_access_token, verify_password
 from backend.services import email_service
 from backend.services.auth_service import create_password_reset_token
 
@@ -86,6 +86,25 @@ def test_invalid_registration_data_is_rejected():
 	assert response.status_code == 422
 
 
+def test_public_registration_rejects_forged_admin_role_and_still_creates_users():
+	forged = client.post(
+		"/api/v1/auth/register",
+		json={
+			"full_name": "Forged Admin",
+			"email": "forged-admin@example.com",
+			"password": "ForgedAdmin123",
+			"role": "admin",
+		},
+	)
+	assert forged.status_code == 422
+
+	assert register_user("ordinary@example.com").status_code == 201
+	db = TestSessionLocal()
+	ordinary = db.query(User).filter(User.email == "ordinary@example.com").one()
+	assert ordinary.role == "user"
+	db.close()
+
+
 def test_login_success_and_auth_me():
 	register_user()
 	response = client.post(
@@ -140,7 +159,7 @@ def test_missing_malformed_and_expired_tokens_are_rejected():
 	assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {expired}"}).status_code == 401
 
 
-def test_admin_dependency_rejects_users_and_accepts_only_configured_owner(monkeypatch):
+def test_admin_dependency_accepts_active_admins_and_rejects_normal_users(monkeypatch):
 	monkeypatch.setattr(
 		"backend.dependencies.get_settings",
 		lambda: SimpleNamespace(ADMIN_OWNER_EMAIL="admin@example.com"),
@@ -153,9 +172,7 @@ def test_admin_dependency_rejects_users_and_accepts_only_configured_owner(monkey
 	admin = User(id=2, full_name="Admin", email="admin@example.com", hashed_password="hash", role="admin")
 	assert get_current_admin(admin) is admin
 	other_admin = User(id=3, full_name="Other Admin", email="other@example.com", hashed_password="hash", role="admin")
-	with pytest.raises(HTTPException) as error:
-		get_current_admin(other_admin)
-	assert error.value.status_code == 403
+	assert get_current_admin(other_admin) is other_admin
 
 
 def test_jwt_contains_only_minimal_identity_claims():

@@ -30,7 +30,7 @@ Provides user registration, authentication, and authorization.
 - `POST /api/v1/auth/register` creates a normal user; client-supplied role fields are rejected.
 - `POST /api/v1/auth/login` authenticates active users, including administrators.
 
-Administrator API access requires both the `admin` database role and an email matching the `ADMIN_OWNER_EMAIL` environment setting. If that setting is empty, administrator endpoints fail closed. There is no public API for creating administrator accounts.
+Administrator API access requires an active account with the `admin` database role and a configured `ADMIN_OWNER_EMAIL`. The owner email setting must be present or administrator endpoints fail closed. Public registration never creates administrator accounts.
 
 Bootstrap the first configured owner only from an authenticated, trusted backend operator shell. Set `ADMIN_OWNER_EMAIL` and a temporary random `ADMIN_BOOTSTRAP_TOKEN` of at least 32 characters in the backend environment, apply the normal deployment migrations, then run `python -m backend.create_admin`. The command requires the configured email and token, validates the email and password, and stores only a password hash. It cannot create an owner for another email. Once the configured account is active with the `admin` role, the command refuses further bootstrap attempts. Remove `ADMIN_BOOTSTRAP_TOKEN` from the deployment environment after successful setup.
 
@@ -74,14 +74,15 @@ Provides aggregated information required by the analytics interface.
 
 ### Administration
 
-Every endpoint in this section requires a bearer token for an active account whose role is `admin` and whose email matches `ADMIN_OWNER_EMAIL`. If the owner setting is missing, administrator endpoints fail closed with `503`. The configured owner must be bootstrapped through the authenticated operator-shell process described above.
+Every endpoint in this section requires a bearer token for an active account whose role is `admin`. If `ADMIN_OWNER_EMAIL` is missing, administrator endpoints fail closed with `503`. Bootstrap the first configured owner through the authenticated operator-shell process described above. After signing in, an authorized administrator can create the second administrator through the protected dashboard; the database migration enforces the two-active-admin cap even for simultaneous requests.
 
 - `GET /api/v1/admin/users` lists account summaries. Optional `search` matches full name or email; `page` defaults to `1`, and `page_size` defaults to `10` with a maximum of `100`. The response contains `items`, `total`, `page`, and `page_size`. Password hashes and credentials are never included.
 - `POST /api/v1/admin/users` creates an active standard user account from `full_name`, `email`, and `password`, using the same validation and password hashing as public registration. It returns `201` and a safe account summary; duplicate email addresses return `409`. The request rejects extra fields, including `role`, so this cannot create or promote administrators. The created user can sign in through `POST /api/v1/auth/login`.
+- `POST /api/v1/admin/admins` creates an active administrator account from `full_name`, `email`, and `password`. It requires an authenticated administrator, uses the standard email/password validation and password hashing, and returns a safe account summary. When two active administrators already exist, it returns `409` with a message advising the requester to contact the system administrator. The database trigger is the concurrency-safe final guard.
 - `PATCH /api/v1/admin/users/{user_id}/status` takes `{"is_active": true}` or `{"is_active": false}` and persists the account's active status. Deactivation prevents subsequent authentication. It does not change account roles; administrator accounts cannot be managed by this endpoint. Missing users return `404`; protected administrator accounts return `409`.
 - `GET /api/v1/admin/health` performs a database connectivity query and returns backend/database status and check time. A failed database check returns `503` without exposing connection details.
 
-The admin dashboard uses the protected system analytics endpoint and these three administration endpoints. Account search is paginated, and active status can be changed and reversed. No user deletion, password reset, role escalation, or admin provisioning is exposed through the dashboard.
+The admin dashboard uses the protected system analytics endpoint and these administration endpoints. Account search is paginated, and active status can be changed and reversed for standard users. Admin creation is a separate form and endpoint from standard-user creation. No user deletion, password reset, or role escalation through the standard-user form is exposed.
 ## Error Handling
 
 The API uses standard HTTP status codes and structured JSON responses. Authentication and authorization failures are rejected appropriately, while invalid input is handled through Pydantic validation.

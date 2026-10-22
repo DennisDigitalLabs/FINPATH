@@ -45,7 +45,8 @@ function createAdminPage() {
 	const ids = [
 		'admin-state', 'user-list-state', 'health-state', 'admin-users-body',
 		'admin-users-table', 'refresh-admin', 'admin-logout', 'create-user-form',
-		'create-user-submit', 'create-user-state', 'user-search-form',
+		'create-user-submit', 'create-user-state', 'create-admin-form',
+		'create-admin-submit', 'create-admin-state', 'user-search-form',
 		'user-search', 'clear-user-search', 'users-previous', 'users-next',
 		'assessment-distribution', 'risk-distribution', 'generated-at',
 		'users-summary', 'user-page-summary'
@@ -58,6 +59,12 @@ function createAdminPage() {
 		password: { value: 'NewMember123' }
 	};
 	elements.get('create-user-form').reset = function () { this.wasReset = true; };
+	elements.get('create-admin-form').elements = {
+		full_name: { value: 'New Admin' },
+		email: { value: 'new-admin@example.com' },
+		password: { value: 'NewAdmin123' }
+	};
+	elements.get('create-admin-form').reset = function () { this.wasReset = true; };
 	elements.get('admin-users-body').addEventListener = function (name, callback) {
 		this.listeners[name] = callback;
 	};
@@ -212,6 +219,7 @@ test('admin account form submits to the API and confirms only after success', as
 			}),
 			listAdminUsers: () => Promise.resolve({ items: [], total: 0, page: 1, page_size: 10 }),
 			createAdminUser(user) { submitted = user; return Promise.resolve({}); },
+			createAdminAccount(admin) { submitted = admin; return Promise.resolve({}); },
 			clearToken() {}
 		}
 	};
@@ -227,6 +235,16 @@ test('admin account form submits to the API and confirms only after success', as
 	}));
 	assert.equal(page.elements.get('create-user-form').wasReset, true);
 	assert.match(page.elements.get('create-user-state').textContent, /Account created/);
+
+	page.elements.get('create-admin-form').listeners.submit({ preventDefault() {} });
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(JSON.stringify(submitted), JSON.stringify({
+		full_name: 'New Admin',
+		email: 'new-admin@example.com',
+		password: 'NewAdmin123'
+	}));
+	assert.equal(page.elements.get('create-admin-form').wasReset, true);
+	assert.match(page.elements.get('create-admin-state').textContent, /Administrator account created/);
 });
 
 test('admin API client uses search pagination and persisted status endpoint', async () => {
@@ -257,6 +275,11 @@ test('admin API client uses search pagination and persisted status endpoint', as
 		email: 'new-member@example.com',
 		password: 'NewMember123'
 	});
+	await window.FinpathAPI.createAdminAccount({
+		full_name: 'New Admin',
+		email: 'new-admin@example.com',
+		password: 'NewAdmin123'
+	});
 	await window.FinpathAPI.setAdminUserActive(9, false);
 
 	assert.match(calls[0].url, /\/api\/v1\/admin\/users\?search=Alice\+Smith&page=2&page_size=20$/);
@@ -264,9 +287,12 @@ test('admin API client uses search pagination and persisted status endpoint', as
 	assert.equal(calls[1].url, 'https://api.example.invalid/api/v1/admin/users');
 	assert.equal(calls[1].options.method, 'POST');
 	assert.equal(calls[1].options.body, '{"full_name":"New Member","email":"new-member@example.com","password":"NewMember123"}');
-	assert.equal(calls[2].url, 'https://api.example.invalid/api/v1/admin/users/9/status');
-	assert.equal(calls[2].options.method, 'PATCH');
-	assert.equal(calls[2].options.body, '{"is_active":false}');
+	assert.equal(calls[2].url, 'https://api.example.invalid/api/v1/admin/admins');
+	assert.equal(calls[2].options.method, 'POST');
+	assert.equal(calls[2].options.body, '{"full_name":"New Admin","email":"new-admin@example.com","password":"NewAdmin123"}');
+	assert.equal(calls[3].url, 'https://api.example.invalid/api/v1/admin/users/9/status');
+	assert.equal(calls[3].options.method, 'PATCH');
+	assert.equal(calls[3].options.body, '{"is_active":false}');
 });
 
 test('admin page exposes working search, pagination, health, refresh, and logout controls', () => {
@@ -274,6 +300,7 @@ test('admin page exposes working search, pagination, health, refresh, and logout
 	assert.match(adminHtml, /id="admin-logout"/);
 	assert.match(adminHtml, /id="user-search-form"/);
 	assert.match(adminHtml, /id="create-user-form"/);
+	assert.match(adminHtml, /id="create-admin-form"/);
 	assert.match(adminHtml, /id="users-previous"/);
 	assert.match(adminHtml, /id="users-next"/);
 	assert.match(adminHtml, /id="health-section"/);

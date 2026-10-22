@@ -70,7 +70,7 @@ def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
             detail="Administrator access is not configured",
         )
-    if current_user.role != "admin" or current_user.email.strip().lower() != owner_email:
+    if current_user.role != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator privileges required",

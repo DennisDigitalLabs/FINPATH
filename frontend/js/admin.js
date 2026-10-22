@@ -14,6 +14,9 @@
 	var createUserForm = document.getElementById('create-user-form');
 	var createUserState = document.getElementById('create-user-state');
 	var createUserButton = document.getElementById('create-user-submit');
+	var createAdminForm = document.getElementById('create-admin-form');
+	var createAdminState = document.getElementById('create-admin-state');
+	var createAdminButton = document.getElementById('create-admin-submit');
 
 	function setMessage(element, message, isError) {
 		element.textContent = message;
@@ -255,6 +258,32 @@
 			}
 		}).finally(function () {
 			createUserButton.disabled = false;
+		});
+	});
+	createAdminForm.addEventListener('submit', function (event) {
+		event.preventDefault();
+		var admin = {
+			full_name: createAdminForm.elements.full_name.value.trim(),
+			email: createAdminForm.elements.email.value.trim(),
+			password: createAdminForm.elements.password.value
+		};
+		createAdminButton.disabled = true;
+		setMessage(createAdminState, 'Creating administrator account…', false);
+		window.FinpathAPI.createAdminAccount(admin).then(function () {
+			createAdminForm.reset();
+			setMessage(createAdminState, 'Administrator account created. The new administrator can sign in.', false);
+			loadUsers();
+			loadAnalytics();
+		}).catch(function (reason) {
+			if (!handleFailure(reason, createAdminState, 'The administrator account could not be created.')) {
+				setMessage(
+					createAdminState,
+					reason && reason.message ? reason.message : 'The administrator account could not be created.',
+					true
+				);
+			}
+		}).finally(function () {
+			createAdminButton.disabled = false;
 		});
 	});
 	document.getElementById('admin-logout').addEventListener('click', function () {
