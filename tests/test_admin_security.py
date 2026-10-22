@@ -1,6 +1,7 @@
 import os
 import runpy
 from pathlib import Path
+from types import SimpleNamespace
 
 os.environ.setdefault("ENVIRONMENT", "testing")
 os.environ.setdefault("DEBUG", "false")
@@ -17,13 +18,14 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from backend import create_admin as admin_cli
+from backend import dependencies as auth_dependencies
 from backend.database import Base, SessionLocal, engine
 from backend.dependencies import get_db
 from backend.main import app
 from backend.models import User
 from backend.services import auth_service
 from backend.schemas.user import AdminCreate, UserCreate
-from backend.security import decode_access_token, verify_password
+from backend.security import decode_access_token, hash_password, verify_password
 from backend.services.auth_service import count_admin_users, create_admin_user, register_user
 
 
@@ -62,6 +64,13 @@ def _create_admin(db, email, password):
         db,
         AdminCreate(full_name="Test Admin", email=email, password=password),
     )
+
+
+def _configure_admin_owner(monkeypatch, email):
+    settings = SimpleNamespace(ADMIN_OWNER_EMAIL=email.strip().lower())
+    monkeypatch.setattr(auth_dependencies, "get_settings", lambda: settings)
+    monkeypatch.setattr(auth_service, "get_settings", lambda: settings)
+    monkeypatch.setattr(admin_cli, "get_settings", lambda: settings)
 
 
 def _login(client, email, password):
@@ -120,6 +129,7 @@ def test_count_admin_users_counts_only_active_admins(db):
 def test_first_admin_cli_creates_hashed_admin_that_can_login_and_access_admin_endpoint(
     client, db, monkeypatch
 ):
+    _configure_admin_owner(monkeypatch, "first-admin@example.com")
     inputs = iter(["first-admin@example.com", "First Admin"])
     passwords = iter(["FirstAdmin123", "FirstAdmin123"])
     monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
@@ -148,17 +158,56 @@ def test_first_admin_cli_creates_hashed_admin_that_can_login_and_access_admin_en
     assert count_admin_users(db) == 1
 
 
-def test_admin_endpoint_requires_admin_and_enforces_two_active_limit(client, db):
-    first_admin = _create_admin(db, "first@example.com", "FirstAdmin123")
-    admin_token = _login(client, first_admin.email, "FirstAdmin123")
-    admin_headers = {"Authorization": f"Bearer {admin_token}"}
-    second_data = {
-        "full_name": "Second Admin",
-        "email": "second@example.com",
-        "password": "SecondAdmin123",
-    }
+def test_admin_cli_promotes_only_the_confirmed_configured_owner(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    register_user(
+        db,
+        UserCreate(full_name="Owner", email="owner@example.com", password="OwnerPassword123"),
+    )
+    inputs = iter(["owner@example.com", "yes"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
 
-    assert client.post("/api/v1/auth/admins", json=second_data).status_code == 401
+    assert admin_cli.main() == 0
+    db.expire_all()
+    owner = db.query(User).filter(User.email == "owner@example.com").one()
+    assert owner.role == "admin"
+
+    token = _login(client, owner.email, "OwnerPassword123")
+    response = client.get("/api/v1/analytics/system", headers={"Authorization": f"Bearer {token}"})
+    assert response.status_code == 200
+
+
+def test_admin_cli_requires_explicit_confirmation_to_revoke_other_admins(db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    owner = register_user(
+        db,
+        UserCreate(full_name="Owner", email="owner@example.com", password="OwnerPassword123"),
+    )
+    other_admin = User(
+        full_name="Other Admin",
+        email="other-admin@example.com",
+        hashed_password=hash_password("OtherAdmin123"),
+        role="admin",
+        is_active=True,
+    )
+    db.add(other_admin)
+    db.commit()
+    inputs = iter(["owner@example.com", "REVOKE", "yes"])
+    monkeypatch.setattr("builtins.input", lambda _prompt: next(inputs))
+
+    assert admin_cli.main() == 0
+    db.expire_all()
+    assert db.get(User, owner.id).role == "admin"
+    assert db.get(User, other_admin.id).role == "user"
+
+
+def test_only_configured_admin_owner_can_access_admin_api_and_admin_creation_is_disabled(
+    client, db, monkeypatch
+):
+    _configure_admin_owner(monkeypatch, "first@example.com")
+    first_admin = _create_admin(db, "first@example.com", "FirstAdmin123")
+    owner_token = _login(client, first_admin.email, "FirstAdmin123")
+    owner_headers = {"Authorization": f"Bearer {owner_token}"}
 
     user_response = client.post(
         "/api/v1/auth/register",
@@ -166,41 +215,50 @@ def test_admin_endpoint_requires_admin_and_enforces_two_active_limit(client, db)
     )
     assert user_response.status_code == 201
     user_token = _login(client, "user@example.com", "NormalUser123")
-    assert client.post(
-        "/api/v1/auth/admins",
-        json=second_data,
+    assert client.get(
+        "/api/v1/analytics/system",
         headers={"Authorization": f"Bearer {user_token}"},
     ).status_code == 403
 
-    assert client.post(
-        "/api/v1/auth/admins",
-        json={**second_data, "role": "admin"},
-        headers=admin_headers,
-    ).status_code == 422
+    other_admin = User(
+        full_name="Other Admin",
+        email="other-admin@example.com",
+        hashed_password=hash_password("OtherAdmin123"),
+        role="admin",
+        is_active=True,
+    )
+    db.add(other_admin)
+    db.commit()
+    other_token = _login(client, other_admin.email, "OtherAdmin123")
 
-    second_response = client.post("/api/v1/auth/admins", json=second_data, headers=admin_headers)
-    assert second_response.status_code == 201
-    second_admin = second_response.json()
-    assert second_admin["role"] == "admin"
-    assert second_admin["is_active"] is True
-    assert "hashed_password" not in second_admin
-    stored_second = db.query(User).filter(User.email == "second@example.com").one()
-    assert stored_second.hashed_password != second_data["password"]
-    assert verify_password(second_data["password"], stored_second.hashed_password)
-    second_token = _login(client, "second@example.com", second_data["password"])
-    assert decode_access_token(second_token)["role"] == "admin"
     assert client.get(
         "/api/v1/analytics/system",
-        headers={"Authorization": f"Bearer {second_token}"},
-    ).status_code == 200
-
-    assert client.post("/api/v1/auth/admins", json=second_data, headers=admin_headers).status_code == 409
-    third_data = {**second_data, "email": "third@example.com"}
-    assert client.post("/api/v1/auth/admins", json=third_data, headers=admin_headers).status_code == 409
+        headers={"Authorization": f"Bearer {other_token}"},
+    ).status_code == 403
+    assert client.get("/api/v1/analytics/system", headers=owner_headers).status_code == 200
+    assert client.post("/api/v1/auth/admins", json={}).status_code == 404
     assert count_admin_users(db) == 2
 
 
-def test_inactive_admin_cannot_login_or_use_admin_endpoint(client, db):
+def test_admin_access_fails_closed_when_owner_is_not_configured(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "admin@example.com")
+    admin = _create_admin(db, "admin@example.com", "AdminPassword123")
+    token = _login(client, admin.email, "AdminPassword123")
+    monkeypatch.setattr(
+        auth_dependencies,
+        "get_settings",
+        lambda: SimpleNamespace(ADMIN_OWNER_EMAIL=""),
+    )
+
+    response = client.get(
+        "/api/v1/analytics/system",
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert response.status_code == 503
+
+
+def test_inactive_admin_cannot_login_or_use_admin_endpoint(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "inactive-admin@example.com")
     admin = _create_admin(db, "inactive-admin@example.com", "InactiveAdmin123")
     token = _login(client, admin.email, "InactiveAdmin123")
     db.query(User).filter(User.id == admin.id).update({"is_active": False})
@@ -264,8 +322,10 @@ def test_admin_limit_migration_blocks_third_and_reactivation(monkeypatch):
         db.rollback()
 
         with monkeypatch.context() as scoped_patch:
+            settings = SimpleNamespace(ADMIN_OWNER_EMAIL="concurrent-admin3@example.com")
+            scoped_patch.setattr(auth_service, "get_settings", lambda: settings)
             scoped_patch.setattr(auth_service, "count_admin_users", lambda _session: 1)
-            with pytest.raises(ValueError, match="Maximum of 2 active admin accounts"):
+            with pytest.raises(ValueError, match="active admin account already exists"):
                 auth_service.create_admin_user(
                     db,
                     AdminCreate(
@@ -277,14 +337,31 @@ def test_admin_limit_migration_blocks_third_and_reactivation(monkeypatch):
 
         db.query(User).filter(User.id == first.id).update({"is_active": False})
         db.commit()
-        auth_service.create_admin_user(
-            db,
-            AdminCreate(
+        with monkeypatch.context() as scoped_patch:
+            scoped_patch.setattr(
+                auth_service,
+                "get_settings",
+                lambda: SimpleNamespace(ADMIN_OWNER_EMAIL="replacement-admin@example.com"),
+            )
+            with pytest.raises(ValueError, match="active admin account already exists"):
+                auth_service.create_admin_user(
+                    db,
+                    AdminCreate(
+                        full_name="Replacement Admin",
+                        email="replacement-admin@example.com",
+                        password="ReplacementAdmin123",
+                    ),
+                )
+        db.add(
+            User(
                 full_name="Replacement Admin",
                 email="replacement-admin@example.com",
-                password="ReplacementAdmin123",
-            ),
+                hashed_password="hash",
+                role="admin",
+                is_active=True,
+            )
         )
+        db.commit()
         assert auth_service.count_admin_users(db) == 2
 
         with pytest.raises(IntegrityError):

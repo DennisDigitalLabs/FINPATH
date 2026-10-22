@@ -1,3 +1,12 @@
+.admin-page [hidden] {
+	display: none !important;
+}
+
+.admin-denied {
+	display: block;
+	padding-block: 2rem;
+}
+
 .admin-pill {
 	flex: 0 0 auto;
 	border: 1px solid #a8ddc4;

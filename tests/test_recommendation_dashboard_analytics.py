@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from types import SimpleNamespace
 
 import pytest
 from fastapi.testclient import TestClient
@@ -284,7 +285,11 @@ def test_user_analytics_calculates_only_owned_records():
     }
 
 
-def test_admin_system_analytics_and_user_forbidden():
+def test_admin_system_analytics_and_user_forbidden(monkeypatch):
+    monkeypatch.setattr(
+        "backend.dependencies.get_settings",
+        lambda: SimpleNamespace(ADMIN_OWNER_EMAIL="admin-analytics@example.com"),
+    )
     user_token = register_and_login("regular-analytics@example.com")
     admin_token = register_and_login("admin-analytics@example.com")
     db = TestSessionLocal()

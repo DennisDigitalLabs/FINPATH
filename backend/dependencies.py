@@ -11,6 +11,7 @@ from fastapi.security import OAuth2PasswordBearer
 from jose import JWTError
 from sqlalchemy.orm import Session
 
+from backend.config import get_settings
 from backend.database import SessionLocal
 from backend.models import User
 from backend.security import decode_access_token
@@ -63,7 +64,13 @@ def get_current_user(
 
 
 def get_current_admin(current_user: User = Depends(get_current_user)) -> User:
-    if current_user.role != "admin":
+    owner_email = get_settings().ADMIN_OWNER_EMAIL
+    if not owner_email:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Administrator access is not configured",
+        )
+    if current_user.role != "admin" or current_user.email.strip().lower() != owner_email:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Administrator privileges required",

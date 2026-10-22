@@ -43,9 +43,10 @@ class Settings(BaseSettings):
     SECRET_KEY: str = ""
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ADMIN_OWNER_EMAIL: str = ""
 
     # Password reset and email delivery configuration
-    FRONTEND_URL: str = "https://finpath.onrender.com"
+    FRONTEND_URL: str = "https://finpath-1afl.onrender.com"
     RESET_TOKEN_EXPIRE_MINUTES: int = 30
     SMTP_HOST: str = ""
     SMTP_PORT: int = 587
@@ -80,6 +81,11 @@ class Settings(BaseSettings):
         if value <= 0:
             raise ValueError("ACCESS_TOKEN_EXPIRE_MINUTES must be positive")
         return value
+
+    @field_validator("ADMIN_OWNER_EMAIL")
+    @classmethod
+    def normalize_admin_owner_email(cls, value: str) -> str:
+        return value.strip().lower()
 
     @model_validator(mode="after")
     def validate_production_settings(self) -> "Settings":

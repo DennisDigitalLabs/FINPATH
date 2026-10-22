@@ -140,7 +140,11 @@ def test_missing_malformed_and_expired_tokens_are_rejected():
 	assert client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {expired}"}).status_code == 401
 
 
-def test_admin_dependency_rejects_users_and_accepts_admins():
+def test_admin_dependency_rejects_users_and_accepts_only_configured_owner(monkeypatch):
+	monkeypatch.setattr(
+		"backend.dependencies.get_settings",
+		lambda: SimpleNamespace(ADMIN_OWNER_EMAIL="admin@example.com"),
+	)
 	user = User(id=1, full_name="User", email="user@example.com", hashed_password="hash", role="user")
 	with pytest.raises(HTTPException) as error:
 		get_current_admin(user)
@@ -148,6 +152,10 @@ def test_admin_dependency_rejects_users_and_accepts_admins():
 
 	admin = User(id=2, full_name="Admin", email="admin@example.com", hashed_password="hash", role="admin")
 	assert get_current_admin(admin) is admin
+	other_admin = User(id=3, full_name="Other Admin", email="other@example.com", hashed_password="hash", role="admin")
+	with pytest.raises(HTTPException) as error:
+		get_current_admin(other_admin)
+	assert error.value.status_code == 403
 
 
 def test_jwt_contains_only_minimal_identity_claims():
@@ -178,7 +186,18 @@ def test_forgot_password_sends_reset_email_when_smtp_is_configured(monkeypatch):
 	assert response.status_code == 202
 	assert response.json() == {"message": "If an account exists for that email, a password reset link will be sent shortly."}
 	assert emails[0][0] == "amina@example.com"
+	assert emails[0][1].startswith(f"{get_settings().FRONTEND_URL}/reset-password.html#token=")
 	assert "#token=" in emails[0][1]
+
+
+def test_forgot_password_returns_explicit_unavailable_error_without_smtp(monkeypatch):
+	monkeypatch.setattr(auth_routes, "password_reset_email_configured", lambda: False)
+	register_user()
+
+	response = client.post("/api/v1/auth/forgot-password", json={"email": "amina@example.com"})
+
+	assert response.status_code == 503
+	assert response.json() == {"detail": "Password reset is temporarily unavailable."}
 
 
 def test_forgot_password_uses_same_response_for_existing_and_missing_email(monkeypatch):

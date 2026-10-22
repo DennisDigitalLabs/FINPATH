@@ -4,11 +4,10 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from backend.dependencies import get_current_admin, get_current_user, get_db
+from backend.dependencies import get_current_user, get_db
 from backend.models import User
 from backend.config import get_settings
 from backend.schemas.user import (
-	AdminCreate,
 	PasswordResetConfirm,
 	PasswordResetRequest,
 	PasswordResetToken,
@@ -19,7 +18,6 @@ from backend.schemas.user import (
 )
 from backend.services.auth_service import (
 	authenticate_user,
-	create_admin_user,
 	create_password_reset_token,
 	get_user_by_email,
 	get_user_from_password_reset_token,
@@ -42,18 +40,6 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)) -> User:
 	except IntegrityError:
 		db.rollback()
 		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="An account with this email already exists")
-
-
-@router.post("/admins", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-def create_admin_account(
-	admin_data: AdminCreate,
-	db: Session = Depends(get_db),
-	_admin: User = Depends(get_current_admin),
-) -> User:
-	try:
-		return create_admin_user(db, admin_data)
-	except ValueError as exc:
-		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 
 @router.post("/login", response_model=TokenResponse)

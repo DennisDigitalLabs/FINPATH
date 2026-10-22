@@ -18,6 +18,8 @@ services:
         value: HS256
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "30"
+      - key: ADMIN_OWNER_EMAIL
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: CORS_ORIGINS
@@ -86,4 +88,3 @@ services:
       - type: rewrite
         source: /admin
         destination: /admin.html
-

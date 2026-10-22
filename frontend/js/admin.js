@@ -2,10 +2,7 @@
 	'use strict';
 
 	var content = document.querySelector('.admin-content');
-	var adminCreateSection = document.getElementById('admin-create-section');
-	var adminCreateForm = document.getElementById('admin-create-form');
-	var adminCreateStatus = document.getElementById('admin-create-status');
-	var adminCreateSubmit = document.getElementById('admin-create-submit');
+	var layout = document.querySelector('.admin-layout');
 	var errorState = document.createElement('div');
 	errorState.className = 'admin-notice live-admin-state';
 	errorState.setAttribute('role', 'status');
@@ -15,62 +12,17 @@
 	content.querySelectorAll('.admin-section').forEach(function (section) { section.hidden = true; });
 
 	function showError(message) {
+		var dashboardLink = document.createElement('a');
 		errorState.setAttribute('role', 'alert');
 		errorState.textContent = message;
 		errorState.hidden = false;
-		content.querySelector('.admin-intro').hidden = true;
-		content.querySelector('.admin-notice:not(.live-admin-state)').hidden = true;
-		content.querySelectorAll('.admin-section:not(#admin-create-section), .admin-notice:not([role="alert"])').forEach(function (section) { section.hidden = true; });
-		document.querySelectorAll('.stat-card').forEach(function (card) { card.hidden = true; });
+		dashboardLink.className = 'btn btn-outline';
+		dashboardLink.href = '/dashboard';
+		dashboardLink.textContent = 'Return to dashboard';
+		layout.className = 'container admin-denied';
+		layout.replaceChildren(errorState, dashboardLink);
+		document.querySelector('.admin-header').remove();
 	}
-
-	function adminCreateError(reason) {
-		if (reason && reason.status === 401) return 'Your session has expired. Please log in again.';
-		if (reason && reason.status === 403) return 'Administrator access is required.';
-		if (reason && reason.status === 409) return 'An active administrator with this email already exists or the maximum number of active administrators has been reached.';
-		if (reason && reason.status === 422) return 'Please check the account details and try again.';
-		return reason && reason.message ? reason.message : 'We could not create the administrator account. Please try again.';
-	}
-
-	adminCreateForm.addEventListener('submit', function (event) {
-		event.preventDefault();
-		if (!adminCreateForm.checkValidity()) {
-			adminCreateForm.reportValidity();
-			return;
-		}
-
-		var fullName = document.getElementById('admin-create-name').value.trim();
-		var email = document.getElementById('admin-create-email').value.trim();
-		var password = document.getElementById('admin-create-password').value;
-		var confirmation = document.getElementById('admin-create-confirm-password').value;
-		if (!fullName) {
-			adminCreateStatus.textContent = 'Enter the administrator\'s full name.';
-			return;
-		}
-		if (password.length < 8 || password.length > 128 || password !== password.trim() || !/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
-			adminCreateStatus.textContent = 'Use a password of 8 to 128 characters, with a letter and a number and no surrounding spaces.';
-			return;
-		}
-		if (password !== confirmation) {
-			adminCreateStatus.textContent = 'The passwords do not match.';
-			return;
-		}
-
-		adminCreateStatus.textContent = 'Creating administrator account...';
-		adminCreateSubmit.disabled = true;
-		window.FinpathAPI.postAuthenticated('/api/v1/auth/admins', {
-			full_name: fullName,
-			email: email,
-			password: password
-		}).then(function () {
-			adminCreateForm.reset();
-			adminCreateStatus.textContent = 'Administrator account created successfully.';
-		}).catch(function (reason) {
-			adminCreateStatus.textContent = adminCreateError(reason);
-		}).then(function () {
-			adminCreateSubmit.disabled = false;
-		});
-	});
 
 	function renderDistribution(targetId, values) {
 		var list = document.getElementById(targetId);
@@ -123,7 +75,6 @@
 		document.querySelector('.sidebar-note strong').textContent = 'Live administration';
 		document.querySelector('.sidebar-note small').textContent = 'System data from the protected analytics service.';
 		document.getElementById('overview-section').hidden = false;
-		document.getElementById('admin-create-section').hidden = false;
 		renderDistribution('assessment-distribution', data.assessment_status_distribution);
 		renderDistribution('risk-distribution', data.risk_level_distribution);
 	}
@@ -136,7 +87,6 @@
 				forbidden.status = 403;
 				throw forbidden;
 			}
-			adminCreateSection.hidden = false;
 			return window.FinpathAPI.getSystemAnalytics();
 		}).then(render).catch(function (reason) {
 			if (reason && reason.status === 401) { window.location.href = '/login?next=/admin'; return; }

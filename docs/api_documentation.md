@@ -29,9 +29,12 @@ Provides user registration, authentication, and authorization.
 
 - `POST /api/v1/auth/register` creates a normal user; client-supplied role fields are rejected.
 - `POST /api/v1/auth/login` authenticates active users, including administrators.
-- `POST /api/v1/auth/admins` creates an active administrator and requires an active administrator bearer token. The body accepts `full_name`, `email`, and `password`; it does not accept a role. It returns `201` on success, `401` for missing/invalid credentials, `403` for a normal user, and `409` for a duplicate email or active-admin limit.
 
-The initial administrator is created by a trusted operator after migrations are applied: run `python -m backend.create_admin` in an environment configured for the target database. The command prompts for the password and only creates an account when no active administrator exists.
+Administrator API access requires both the `admin` database role and an email matching the `ADMIN_OWNER_EMAIL` environment setting. If that setting is empty, administrator endpoints fail closed. There is no public API for creating additional administrator accounts.
+
+Provision the configured owner through a trusted operator command: set `ADMIN_OWNER_EMAIL`, then run `python -m backend.create_admin` in an environment configured for the target database. The command can create the owner account or, after explicit confirmation, promote an existing active account with that exact email. If other active administrators exist, the operator must explicitly type `REVOKE` before their admin roles are removed. The command will not create or promote a different account or silently demote another administrator.
+
+Password-reset email delivery requires `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM_EMAIL` to be configured. `FRONTEND_URL` must point to the deployed frontend so reset links return to the correct site. If SMTP is missing or delivery fails, the API returns `503` rather than reporting a false success.
 
 ### Assessments
 

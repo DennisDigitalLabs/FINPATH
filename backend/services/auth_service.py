@@ -43,10 +43,15 @@ def count_admin_users(db: Session) -> int:
 
 def create_admin_user(db: Session, admin_data: AdminCreate) -> User:
 	email = normalize_email(str(admin_data.email))
+	owner_email = normalize_email(get_settings().ADMIN_OWNER_EMAIL)
+	if not owner_email:
+		raise ValueError("ADMIN_OWNER_EMAIL must be configured before creating the owner account")
+	if email != owner_email:
+		raise ValueError("Only the configured admin owner can be created")
 	if get_user_by_email(db, email) is not None:
 		raise ValueError("An account with this email already exists")
-	if count_admin_users(db) >= 2:
-		raise ValueError("Maximum of 2 active admin accounts reached")
+	if count_admin_users(db) >= 1:
+		raise ValueError("An active admin account already exists")
 
 	user = User(
 		full_name=admin_data.full_name,

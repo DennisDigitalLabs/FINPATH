@@ -10,6 +10,10 @@ const authScript = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'js', 'auth.js'),
 	'utf8'
 );
+const registerHtml = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'register.html'),
+	'utf8'
+);
 
 function createElement(values = {}) {
 	return {
@@ -92,4 +96,10 @@ test('forgot password keeps the account-enumeration-safe success message', async
 
 	assert.equal(result.status, 'If an account exists for that email, a password reset link will be sent shortly. Check your inbox, or try again later.');
 	assert.equal(result.buttonDisabled, false);
+});
+
+test('registration does not require acknowledgement of unpublished policy pages', () => {
+	assert.doesNotMatch(registerHtml, /name="terms"/);
+	assert.doesNotMatch(registerHtml, /href="#(?:terms|privacy)"/);
+	assert.doesNotMatch(authScript, /a\[href="#terms"\]/);
 });

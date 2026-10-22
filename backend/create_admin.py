@@ -6,13 +6,62 @@ from getpass import getpass
 from pydantic import ValidationError
 from sqlalchemy.exc import SQLAlchemyError
 
+from backend.config import get_settings
 from backend.database import SessionLocal
+from backend.models import User
 from backend.schemas.user import AdminCreate
-from backend.services.auth_service import count_admin_users, create_admin_user
+from backend.services.auth_service import create_admin_user, get_user_by_email, normalize_email
 
 
 def main() -> int:
 	email = input("Admin email: ").strip()
+	owner_email = normalize_email(get_settings().ADMIN_OWNER_EMAIL)
+	if not owner_email:
+		print("ADMIN_OWNER_EMAIL must be configured before provisioning the admin account.", file=sys.stderr)
+		return 1
+	if normalize_email(email) != owner_email:
+		print("The supplied email does not match the configured admin owner.", file=sys.stderr)
+		return 1
+
+	try:
+		with SessionLocal() as db:
+			existing_user = get_user_by_email(db, owner_email)
+			if existing_user is not None:
+				if not existing_user.is_active:
+					raise ValueError("The configured admin owner account is inactive.")
+				other_admins = (
+					db.query(User)
+					.filter(
+						User.role == "admin",
+						User.is_active.is_(True),
+						User.id != existing_user.id,
+					)
+					.all()
+				)
+				if other_admins:
+					confirmation = input(
+						f"Revoke admin access from {len(other_admins)} other active account(s)? Type REVOKE to confirm: "
+					).strip()
+					if confirmation != "REVOKE":
+						print("Admin provisioning cancelled.", file=sys.stderr)
+						return 1
+					for other_admin in other_admins:
+						other_admin.role = "user"
+				if existing_user.role != "admin":
+					if input("Promote the existing owner account to admin? Type yes to confirm: ").strip().lower() != "yes":
+						print("Admin provisioning cancelled.", file=sys.stderr)
+						return 1
+				existing_user.role = "admin"
+				db.commit()
+				print("The configured owner account is now the sole administrator.")
+				return 0
+	except ValueError as exc:
+		print(str(exc), file=sys.stderr)
+		return 1
+	except SQLAlchemyError:
+		print("Admin provisioning failed. Check database connectivity.", file=sys.stderr)
+		return 1
+
 	full_name = input("Admin full name: ").strip()
 	password = getpass("Admin password: ")
 	password_confirmation = getpass("Confirm admin password: ")
@@ -29,8 +78,6 @@ def main() -> int:
 
 	try:
 		with SessionLocal() as db:
-			if count_admin_users(db) > 0:
-				raise ValueError("An active admin already exists; use the authenticated admin API for additional admins.")
 			admin = create_admin_user(db, admin_data)
 	except ValueError as exc:
 		print(str(exc), file=sys.stderr)
@@ -39,7 +86,7 @@ def main() -> int:
 		print("Admin creation failed. Check database connectivity and migration status.", file=sys.stderr)
 		return 1
 
-	print(f"Created initial admin account for {admin.email}.")
+	print("Created the configured admin owner account.")
 	return 0
 
 

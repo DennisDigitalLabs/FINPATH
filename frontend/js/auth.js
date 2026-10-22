@@ -1,8 +1,6 @@
 (function () {
 	'use strict';
 
-	document.querySelectorAll('a[href="#terms"], a[href="#privacy"]').forEach(function (link) { link.remove(); });
-
 	function showError(element, message) {
 		element.textContent = message;
 		element.hidden = false;
