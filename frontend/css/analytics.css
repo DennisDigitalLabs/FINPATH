@@ -7,3 +7,15 @@
 @media (max-width: 64rem) { .analytics-layout { grid-template-columns: 11rem minmax(0, 1fr); }.metric-grid { grid-template-columns: repeat(3, 1fr); }.analytics-main-grid { grid-template-columns: 1fr; } }
 @media (max-width: 48rem) { .analytics-nav-inner { min-height: 4.25rem; }.analytics-layout { display: block; padding-block: 1.5rem 3rem; }.analytics-sidebar { margin-bottom: 2rem; }.side-nav { grid-template-columns: repeat(3, 1fr); }.side-link { display: grid; justify-items: center; border-top: 2px solid transparent; border-left: 0; padding: .55rem .25rem; text-align: center; }.side-link.active { border-top-color: var(--primary); }.sidebar-note { display: none; }.analytics-intro { align-items: start; flex-direction: column; gap: .8rem; }.metric-grid { grid-template-columns: repeat(2, 1fr); }.bar-row { grid-template-columns: 10rem minmax(0, 1fr) 2rem; } }
 @media (max-width: 30rem) { .analytics-nav-inner { align-items: flex-start; flex-direction: column; padding-block: .75rem; }.top-nav-links { width: 100%; }.top-nav-links .nav-link { flex: 1; justify-content: center; }.top-nav-links .nav-link:first-child { display: none; }.side-nav { grid-template-columns: repeat(2, 1fr); }.metric-grid { grid-template-columns: 1fr 1fr; }.analytics-panel { padding: 1rem; }.bar-row { grid-template-columns: 1fr 2rem; gap: .35rem .75rem; }.bar-track { grid-column: 1 / -1; grid-row: 2; }.bar-row b { grid-column: 2; grid-row: 1; }.section-heading { align-items: stretch; flex-direction: column; }.history-table-wrap { margin-inline: -.4rem; } }
+/* Analytics only displays fields returned by the account analytics API. */
+.metric-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.metric-card strong { min-height: 2.2rem; }
+.analytics-data { display: grid; gap: 1.5rem; }
+.analytics-data[hidden] { display: none; }
+.analytics-distributions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+.distribution-list { display: grid; gap: .5rem; margin: 0; padding: 0; list-style: none; }
+.distribution-list li { display: flex; justify-content: space-between; gap: 1rem; border-bottom: 1px solid var(--border); padding: .65rem .2rem; color: var(--text-secondary); text-transform: capitalize; }
+.distribution-list strong { color: var(--secondary); }
+.analytics-content > .panel-footnote { margin-top: 1.25rem; color: var(--text-muted); font-size: var(--text-xs); }
+@media (max-width: 64rem) { .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 48rem) { .analytics-distributions { grid-template-columns: 1fr; } }

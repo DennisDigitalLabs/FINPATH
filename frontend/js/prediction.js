@@ -26,6 +26,7 @@
 
 	function showError(message) {
 		processingState.hidden = true;
+		processingState.setAttribute('aria-busy', 'false');
 		resultState.hidden = true;
 		errorState.textContent = message;
 		errorState.hidden = false;
@@ -117,11 +118,14 @@
 		renderFactors(prediction.contributing_factors);
 		if (recommendationsLink) recommendationsLink.href = '/recommendations?prediction_id=' + encodeURIComponent(prediction.id);
 		processingState.hidden = true;
+		processingState.setAttribute('aria-busy', 'false');
 		resultState.hidden = false;
 		document.getElementById('result-heading').focus();
 	}
 
 	function loadPrediction() {
+		processingState.hidden = false;
+		processingState.setAttribute('aria-busy', 'true');
 		var predictionId = params.get('prediction_id');
 		var assessmentId = params.get('assessment_id');
 		window.FinpathAPI.me().then(function () {

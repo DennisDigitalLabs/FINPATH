@@ -124,7 +124,6 @@
 		document.querySelector('.sidebar-note small').textContent = 'System data from the protected analytics service.';
 		document.getElementById('overview-section').hidden = false;
 		document.getElementById('admin-create-section').hidden = false;
-		content.querySelectorAll('.admin-empty-state').forEach(function (section) { section.hidden = false; });
 		renderDistribution('assessment-distribution', data.assessment_status_distribution);
 		renderDistribution('risk-distribution', data.risk_level_distribution);
 	}

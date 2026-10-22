@@ -41,12 +41,11 @@
 			</div>
 		</section>
 		<div class="container prediction-shell">
-			<div class="prediction-panel processing-panel" id="processing-state" aria-labelledby="processing-heading" hidden aria-live="polite">
+			<div class="prediction-panel processing-panel" id="processing-state" aria-labelledby="processing-heading" aria-live="polite" aria-busy="true" hidden>
 				<div class="processing-visual" aria-hidden="true"><span></span><span></span><span></span></div>
 				<div class="panel-kicker">Your assessment result</div>
 				<h2 id="processing-heading">Loading your prediction</h2>
 				<p class="panel-lede">Retrieving the model result associated with your assessment.</p>
-				<div class="processing-track" role="progressbar" aria-label="Loading prediction" aria-valuemin="0" aria-valuemax="100" aria-valuenow="40"><span id="processing-bar" style="width: 40%"></span></div>
 				<p class="processing-status" id="processing-status">Connecting to FINPATH...</p>
 			</div>
 			<div class="prediction-panel" id="prediction-error" role="alert" hidden></div>

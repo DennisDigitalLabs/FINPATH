@@ -19,6 +19,12 @@
 		if (element) element.textContent = value;
 	}
 
+	function percentage(value) {
+		return typeof value === 'number' && Number.isFinite(value) && value >= 0 && value <= 1
+			? Math.round(value * 100)
+			: null;
+	}
+
 	function showError(message) {
 		errorState.textContent = message;
 		errorState.hidden = false;
@@ -86,8 +92,8 @@
 	function render(data) {
 		var assessment = data.latest_assessment;
 		var prediction = data.latest_prediction;
-		var probability = prediction ? Math.round(Number(prediction.probability) * 100) : null;
-		var confidence = prediction && prediction.confidence !== null && prediction.confidence !== undefined ? Math.round(Number(prediction.confidence) * 100) : null;
+		var probability = prediction ? percentage(prediction.probability) : null;
+		var confidence = prediction ? percentage(prediction.confidence) : null;
 		setText('#dashboard-title', 'Welcome back, ' + String(data.user.full_name));
 		setText('.welcome-band .eyebrow', 'Your workspace');
 		setText('.demo-pill', 'Live dashboard');
@@ -99,26 +105,21 @@
 		setText('.risk-main p', prediction ? String(prediction.explanation) : 'Complete an assessment to generate a prediction.');
 		document.querySelector('.risk-meter').setAttribute('aria-label', probability === null ? 'No model probability available' : 'Model probability ' + probability + ' percent');
 		document.querySelector('.risk-meter span').style.width = (probability === null ? 0 : probability) + '%';
-		setText('.confidence-card .status-tag', confidence === null ? 'Unavailable' : 'Model output');
-		setText('.confidence-number', confidence === null ? '—' : confidence + '%');
-		setText('.confidence-card p', confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the model.');
-		document.querySelector('.confidence-meter').setAttribute('aria-label', confidence === null ? 'Model confidence not available' : 'Model confidence ' + confidence + ' percent');
-		document.querySelector('.confidence-meter').setAttribute('aria-valuenow', String(confidence === null ? 0 : confidence));
-		document.querySelector('.confidence-meter span').style.width = (confidence === null ? 0 : confidence) + '%';
+		document.querySelector('.confidence-card').hidden = confidence === null;
+		if (confidence !== null) {
+			setText('.confidence-card .status-tag', 'Model output');
+			setText('.confidence-number', confidence + '%');
+			setText('.confidence-card p', 'Confidence supplied by the model.');
+			document.querySelector('.confidence-meter').setAttribute('aria-label', 'Model confidence ' + confidence + ' percent');
+			document.querySelector('.confidence-meter').setAttribute('aria-valuenow', String(confidence));
+			document.querySelector('.confidence-meter span').style.width = confidence + '%';
+		}
 		setText('.status-progress strong', data.assessment_count + ' assessments');
 		setText('.status-progress > span', assessment ? String(assessment.assessment_status) : 'None');
-		setText('.assessment-status-card p', assessment ? 'Last reviewed ' + dateText(assessment.updated_at) : 'No assessment has been completed.');
-		document.querySelector('.status-meter').setAttribute('aria-valuenow', assessment ? '100' : '0');
-		document.querySelector('.status-meter').setAttribute('aria-label', assessment ? 'Assessment status ' + assessment.assessment_status : 'No assessment data available');
-		document.querySelector('.status-meter span').style.width = assessment ? '100%' : '0%';
+		setText('.assessment-status-card p', assessment ? 'Latest assessment updated ' + dateText(assessment.updated_at) : 'No assessment has been completed.');
 		if (prediction) document.querySelector('.action-card[href="/prediction"]').href = '/prediction?prediction_id=' + encodeURIComponent(prediction.id);
 		renderRecommendations(data.latest_recommendations);
 		renderActivity(data.recent_activity);
-		document.querySelector('.indicators-section').hidden = true;
-		var recommendationFootnote = document.querySelector('.recommendations-section .section-footnote');
-		if (recommendationFootnote) recommendationFootnote.hidden = true;
-		var previewLabel = document.querySelector('.recommendations-section .preview-label');
-		if (previewLabel) previewLabel.hidden = true;
 		document.querySelector('.activity-section .updated-label').textContent = 'Live activity';
 	}
 

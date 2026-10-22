@@ -2,81 +2,79 @@
 	'use strict';
 
 	var content = document.querySelector('.analytics-content');
-	var errorState = document.createElement('div');
-	errorState.className = 'demo-notice';
-	errorState.setAttribute('role', 'alert');
-	errorState.hidden = true;
-	content.insertBefore(errorState, content.firstChild);
+	var dataSection = document.querySelector('.analytics-data');
+	var errorState = document.getElementById('analytics-error');
 
 	function showError(message) {
 		errorState.textContent = message;
 		errorState.hidden = false;
-		document.querySelectorAll('.metric-grid, .trend-panel, .interpretation-panel, .indicators-panel, .history-panel').forEach(function (section) { section.hidden = true; });
+		dataSection.hidden = true;
+		content.setAttribute('aria-busy', 'false');
 	}
 
-	function setMetric(card, label, value) {
-		card.querySelector('.metric-label').textContent = label;
-		card.querySelector('strong').textContent = String(value);
-		var status = card.querySelector('.metric-status');
-		if (status) status.textContent = 'Live backend data';
+	function isCount(value) {
+		return Number.isSafeInteger(value) && value >= 0;
 	}
 
-	function renderDistributionTable(data) {
-		var panel = document.querySelector('.history-panel');
-		var body = panel.querySelector('tbody');
-		var caption = panel.querySelector('caption');
-		var rows = Object.keys(data.assessment_status_distribution || {}).map(function (key) { return ['Assessment status', key, data.assessment_status_distribution[key]]; });
-		rows = rows.concat(Object.keys(data.risk_level_distribution || {}).map(function (key) { return ['Risk level', key, data.risk_level_distribution[key]]; }));
-		panel.querySelector('h2').textContent = 'Live distributions';
-		panel.querySelector('.section-heading .summary-note').textContent = 'From your account';
-		caption.textContent = 'Live analytics distributions';
-		body.innerHTML = '';
-		rows.forEach(function (row) {
-			var tr = document.createElement('tr');
-			var type = document.createElement('td');
-			var label = document.createElement('td');
-			var value = document.createElement('td');
-			type.textContent = row[0];
-			label.textContent = row[1];
-			value.textContent = String(row[2]);
-			tr.appendChild(type);
-			tr.appendChild(label);
-			tr.appendChild(value);
-			tr.appendChild(document.createElement('td'));
-			body.appendChild(tr);
-		});
-		if (!rows.length) {
-			var empty = document.createElement('tr');
-			var cell = document.createElement('td');
-			cell.colSpan = 4;
-			cell.textContent = 'No analytics data is available yet.';
-			empty.appendChild(cell);
-			body.appendChild(empty);
+	function isDistribution(value) {
+		return value && typeof value === 'object' && !Array.isArray(value) &&
+			Object.keys(value).every(function (key) { return isCount(value[key]); });
+	}
+
+	function renderDistribution(targetId, values) {
+		var list = document.getElementById(targetId);
+		var keys = Object.keys(values);
+		list.textContent = '';
+		if (!keys.length) {
+			var empty = document.createElement('li');
+			empty.textContent = 'No records yet.';
+			list.appendChild(empty);
+			return;
 		}
+		keys.forEach(function (key) {
+			var row = document.createElement('li');
+			var label = document.createElement('span');
+			var count = document.createElement('strong');
+			label.textContent = key.replace(/_/g, ' ');
+			count.textContent = String(values[key]);
+			row.appendChild(label);
+			row.appendChild(count);
+			list.appendChild(row);
+		});
 	}
 
 	function render(data) {
-		var cards = document.querySelectorAll('.metric-card');
-		setMetric(cards[0], 'Total assessments', data.total_assessments);
-		setMetric(cards[1], 'Completed assessments', data.completed_assessments);
-		setMetric(cards[2], 'Predictions generated', data.prediction_count);
-		setMetric(cards[3], 'Recommendations generated', data.recommendation_count);
-		cards[4].hidden = true;
-		document.querySelector('.demo-pill').textContent = 'Live analytics';
-		document.querySelector('.demo-notice:not([role="alert"])').hidden = true;
-		document.querySelector('.summary-note').textContent = 'From your account';
-		document.querySelector('.trend-panel').hidden = true;
-		document.querySelector('.interpretation-panel').hidden = true;
-		document.querySelector('.indicators-panel').hidden = true;
-		renderDistributionTable(data);
+		var metrics = ['total_assessments', 'completed_assessments', 'prediction_count', 'recommendation_count'];
+		if (!data || !metrics.every(function (field) { return isCount(data[field]); }) ||
+			!isDistribution(data.assessment_status_distribution) ||
+			!isDistribution(data.risk_level_distribution)) {
+			throw new Error('The analytics response was incomplete or invalid.');
+		}
+		metrics.forEach(function (field) {
+			document.querySelector('[data-metric="' + field + '"]').textContent = String(data[field]);
+		});
+		renderDistribution('assessment-status-distribution', data.assessment_status_distribution);
+		renderDistribution('risk-level-distribution', data.risk_level_distribution);
+		document.getElementById('analytics-updated').textContent = 'Current account totals';
+		dataSection.hidden = false;
+		content.setAttribute('aria-busy', 'false');
 	}
 
 	function load() {
-		if (!window.FinpathAPI.getToken()) { window.location.href = '/login?next=/analytics'; return; }
-		window.FinpathAPI.me().then(function () { return window.FinpathAPI.getAnalytics(); }).then(render).catch(function (reason) {
-			if (reason && reason.status === 401) { window.location.href = '/login?next=/analytics'; return; }
-			showError(reason && reason.message ? reason.message : 'We could not load your analytics. Please try again.');
-		});
+		if (!window.FinpathAPI.getToken()) {
+			window.location.href = '/login?next=/analytics';
+			return;
+		}
+		window.FinpathAPI.me()
+			.then(function () { return window.FinpathAPI.getAnalytics(); })
+			.then(render)
+			.catch(function (reason) {
+				if (reason && reason.status === 401) {
+					window.location.href = '/login?next=/analytics';
+					return;
+				}
+				showError(reason && reason.message ? reason.message : 'We could not load your analytics. Please try again.');
+			});
 	}
 
 	load();

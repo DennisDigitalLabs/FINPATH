@@ -22,7 +22,10 @@ function createElement() {
 		hidden: false,
 		style: {},
 		appendChild(child) { this.children.push(child); },
-		setAttribute() {},
+		setAttribute(name, value) {
+			this.attributes = this.attributes || {};
+			this.attributes[name] = value;
+		},
 		focus() {},
 		querySelector() { return createElement(); }
 	};
@@ -36,7 +39,7 @@ async function loadPrediction(search, latestPrediction = {
 	explanation: 'Prediction explanation',
 	model_version: 'test',
 	contributing_factors: []
-}) {
+}, pending = false) {
 	const initialHref = predictionHtml.match(
 		/<a class="btn btn-primary" href="([^"]+)">View recommendations/
 	)[1];
@@ -49,6 +52,7 @@ async function loadPrediction(search, latestPrediction = {
 		'result-heading'
 	];
 	const elements = Object.fromEntries(ids.map((id) => [id, createElement()]));
+	elements['processing-state'].hidden = true;
 	elements['processing-state'].parentNode = { insertBefore() {} };
 	elements['result-state'].querySelector = () => createElement();
 	const selectors = new Map([
@@ -72,7 +76,7 @@ async function loadPrediction(search, latestPrediction = {
 	const window = {
 		location: { search },
 		FinpathAPI: {
-			me: () => Promise.resolve({ id: 7 }),
+			me: () => pending ? new Promise(() => {}) : Promise.resolve({ id: 7 }),
 			getPrediction: (id) => Promise.resolve({ ...latestPrediction, id }),
 			getDashboard: () => {
 				calls.dashboard += 1;
@@ -95,6 +99,7 @@ async function loadPrediction(search, latestPrediction = {
 		errorState: elements['prediction-error'],
 		factorList: selectors.get('.factor-list'),
 		link: recommendationsLink,
+		processingState: elements['processing-state'],
 		resultState: elements['result-state']
 	};
 }
@@ -104,6 +109,8 @@ test('prediction recommendations link includes the selected prediction ID', asyn
 
 	assert.equal(result.link.href, '/recommendations?prediction_id=42');
 	assert.equal(result.calls.dashboard, 0);
+	assert.equal(result.processingState.hidden, true);
+	assert.equal(result.processingState.attributes['aria-busy'], 'false');
 });
 
 test('prediction page loads the signed-in user latest result when no ID is selected', async () => {
@@ -121,6 +128,14 @@ test('prediction page explains when the user has no prediction yet', async () =>
 	assert.equal(result.resultState.hidden, true);
 	assert.equal(result.errorState.hidden, false);
 	assert.match(result.errorState.textContent, /complete an assessment/i);
+});
+
+test('prediction page shows an indeterminate loading state while fetching the result', async () => {
+	const result = await loadPrediction('', undefined, true);
+
+	assert.equal(result.processingState.hidden, false);
+	assert.equal(result.processingState.attributes['aria-busy'], 'true');
+	assert.doesNotMatch(predictionHtml, /aria-valuenow="40"|width: 40%/);
 });
 
 test('prediction page renders real SHAP impacts and hides confidence not returned by the model', async () => {

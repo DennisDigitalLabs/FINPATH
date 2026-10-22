@@ -12,6 +12,7 @@
 	var predictionId = rawPredictionId && /^\d+$/.test(rawPredictionId) ? Number(rawPredictionId) : NaN;
 
 	function showError(message, backHref) {
+		document.querySelector('.demo-pill').textContent = 'Recommendations unavailable';
 		list.hidden = true;
 		emptyState.hidden = true;
 		document.querySelector('.summary-section').hidden = true;
@@ -44,15 +45,9 @@
 	}
 
 	function updateSummary() {
-		var completed = recommendations.filter(function (item) { return state[item.id].completed; }).length;
 		var highPriority = recommendations.filter(function (item) { return item.priority === 1; }).length;
-		var percent = recommendations.length ? Math.round((completed / recommendations.length) * 100) : 0;
 		document.getElementById('total-count').textContent = recommendations.length;
 		document.getElementById('priority-count').textContent = highPriority;
-		document.getElementById('completed-count').textContent = completed;
-		document.getElementById('progress-value').textContent = percent + '%';
-		document.getElementById('summary-bar').style.width = percent + '%';
-		document.querySelector('.summary-track').setAttribute('aria-valuenow', String(percent));
 	}
 
 	function appendText(parent, tagName, className, text) {
@@ -69,10 +64,8 @@
 		var header = document.createElement('div');
 		var actions = document.createElement('div');
 		var detail = document.createElement('div');
-		var completeButton = document.createElement('button');
-		var saveButton = document.createElement('button');
 		var detailsButton = document.createElement('button');
-		card.className = 'recommendation-card' + (itemState.completed ? ' is-complete' : '');
+		card.className = 'recommendation-card';
 		card.dataset.id = String(item.id);
 		header.className = 'card-header';
 		appendText(header, 'span', 'category-label', formatCategory(item.category));
@@ -86,23 +79,10 @@
 		if (formatDate(item.created_at)) appendText(detail, 'div', '', 'Generated ' + formatDate(item.created_at));
 		card.appendChild(detail);
 		actions.className = 'card-actions';
-		completeButton.className = 'btn btn-primary btn-sm complete-button';
-		completeButton.type = 'button';
-		completeButton.setAttribute('aria-pressed', String(itemState.completed));
-		completeButton.textContent = itemState.completed ? 'Completed' : 'Mark complete';
-		saveButton.className = 'icon-button save-button' + (itemState.saved ? ' is-saved' : '');
-		saveButton.type = 'button';
-		saveButton.hidden = true;
-		saveButton.setAttribute('aria-pressed', String(itemState.saved));
-		saveButton.setAttribute('aria-label', itemState.saved ? 'Remove saved recommendation' : 'Save recommendation');
-		saveButton.textContent = itemState.saved ? '★' : '☆';
 		detailsButton.className = 'details-button';
 		detailsButton.type = 'button';
-		completeButton.hidden = true;
 		detailsButton.setAttribute('aria-expanded', String(itemState.details));
 		detailsButton.textContent = itemState.details ? 'Hide details ↑' : 'View details ↓';
-		actions.appendChild(completeButton);
-		actions.appendChild(saveButton);
 		actions.appendChild(detailsButton);
 		card.appendChild(actions);
 		return card;
@@ -141,8 +121,6 @@
 		var card = event.target.closest('.recommendation-card');
 		if (!card) return;
 		var itemState = state[card.dataset.id];
-		if (event.target.closest('.complete-button')) itemState.completed = !itemState.completed;
-		if (event.target.closest('.save-button')) itemState.saved = !itemState.saved;
 		if (event.target.closest('.details-button')) itemState.details = !itemState.details;
 		render();
 	});
@@ -175,7 +153,7 @@
 	}).then(function (result) {
 		if (!Array.isArray(result)) throw new Error('The recommendations response was invalid. Please try again.');
 		recommendations = Array.isArray(result) ? result : [];
-		state = recommendations.reduce(function (result, item) { result[item.id] = { completed: false, saved: false, details: false }; return result; }, {});
+		state = recommendations.reduce(function (result, item) { result[item.id] = { details: false }; return result; }, {});
 		setFilterOptions();
 		document.querySelector('.demo-pill').textContent = 'Live recommendations';
 		document.querySelector('.demo-notice').hidden = true;

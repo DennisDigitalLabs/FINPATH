@@ -139,7 +139,7 @@ function executeRecommendations(search, token = 'test-token', scopedRequestFails
 	};
 
 	vm.runInNewContext(recommendationsScript, { window, document, URLSearchParams });
-	return new Promise((resolve) => setImmediate(() => resolve({ calls, elements, window })));
+	return new Promise((resolve) => setImmediate(() => resolve({ calls, elements, selectors, window })));
 }
 
 test('API client targets the prediction-scoped endpoint', async () => {
@@ -200,12 +200,13 @@ test('recommendations page shows an empty-state message when no prediction exist
 });
 
 test('scoped request failure shows an error without falling back to the unfiltered API', async () => {
-	const { calls, elements } = await executeRecommendations('?prediction_id=42', 'test-token', true);
+	const { calls, elements, selectors } = await executeRecommendations('?prediction_id=42', 'test-token', true);
 
 	assert.deepEqual(calls.scoped, [42]);
 	assert.equal(calls.unfiltered, 0);
 	assert.equal(elements['recommendation-error'].hidden, false);
 	assert.equal(elements['recommendation-error'].children[0].href, 'prediction.html?prediction_id=42');
+	assert.equal(selectors.get('.demo-pill').textContent, 'Recommendations unavailable');
 });
 
 test('unauthenticated recommendations redirect preserves the selected prediction ID through login', async () => {
