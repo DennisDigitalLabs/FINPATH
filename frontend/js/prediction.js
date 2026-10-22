@@ -15,7 +15,7 @@
 	var confidenceTrack = document.querySelector('.confidence-track');
 	var modelBadge = document.querySelector('.demo-badge');
 	var factorList = document.querySelector('.factor-list');
-	var recommendationsLink = document.querySelector('.result-actions a[href^="recommendations"]');
+	var recommendationsLink = document.querySelector('.result-actions a[href^="/recommendations"]');
 	resultState.querySelector('.result-header .panel-lede').textContent = '';
 	factorList.innerHTML = '';
 	if (!errorState) {
