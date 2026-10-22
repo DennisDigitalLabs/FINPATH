@@ -18,9 +18,10 @@ const predictionHtml = fs.readFileSync(
 function createElement() {
 	return {
 		childNodes: [{ textContent: '' }],
+		children: [],
 		hidden: false,
 		style: {},
-		appendChild() {},
+		appendChild(child) { this.children.push(child); },
 		setAttribute() {},
 		focus() {},
 		querySelector() { return createElement(); }
@@ -57,8 +58,9 @@ async function loadPrediction(search, latestPrediction = {
 		['.meter-track', createElement()],
 		['.confidence-value', createElement()],
 		['.confidence-card p', createElement()],
+		['.confidence-card', createElement()],
 		['.confidence-track', createElement()],
-		['.demo-badge', createElement()],
+		['.model-badge', createElement()],
 		['.factor-list', createElement()],
 		['.result-actions a[href^="/recommendations"]', recommendationsLink],
 		['.score-label', createElement()],
@@ -87,7 +89,14 @@ async function loadPrediction(search, latestPrediction = {
 	assert.equal(initialHref, '/recommendations');
 	vm.runInNewContext(predictionScript, { window, document, URLSearchParams });
 	await new Promise((resolve) => setImmediate(resolve));
-	return { calls, errorState: elements['prediction-error'], link: recommendationsLink, resultState: elements['result-state'] };
+	return {
+		calls,
+		confidenceCard: selectors.get('.confidence-card'),
+		errorState: elements['prediction-error'],
+		factorList: selectors.get('.factor-list'),
+		link: recommendationsLink,
+		resultState: elements['result-state']
+	};
 }
 
 test('prediction recommendations link includes the selected prediction ID', async () => {
@@ -112,4 +121,25 @@ test('prediction page explains when the user has no prediction yet', async () =>
 	assert.equal(result.resultState.hidden, true);
 	assert.equal(result.errorState.hidden, false);
 	assert.match(result.errorState.textContent, /complete an assessment/i);
+});
+
+test('prediction page renders real SHAP impacts and hides confidence not returned by the model', async () => {
+	const result = await loadPrediction('?prediction_id=42', {
+		id: 42,
+		risk_level: 'medium',
+		probability: 0.4133,
+		confidence: null,
+		explanation: 'Model output',
+		model_version: 'v1',
+		contributing_factors: {
+			top_factors: [{ feature: 'cat__loan_informal_0', impact: -0.125 }]
+		}
+	});
+	const factorCard = result.factorList.children[0];
+
+	assert.equal(factorCard.className, 'factor-card');
+	assert.equal(factorCard.children[0].children[0].textContent, 'Loan informal (encoded category 0)');
+	assert.equal(factorCard.children[0].children[1].textContent, 'SHAP impact for the predicted class: -0.1250');
+	assert.equal(result.confidenceCard.hidden, true);
+	assert.doesNotMatch(predictionHtml, /Illustrative demo data|moderate financial inclusion risk|<span>46<|<small>78/);
 });

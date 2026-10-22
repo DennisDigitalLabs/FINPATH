@@ -13,11 +13,9 @@
 	var confidenceValue = document.querySelector('.confidence-value');
 	var confidenceDescription = document.querySelector('.confidence-card p');
 	var confidenceTrack = document.querySelector('.confidence-track');
-	var modelBadge = document.querySelector('.demo-badge');
+	var modelBadge = document.querySelector('.model-badge');
 	var factorList = document.querySelector('.factor-list');
 	var recommendationsLink = document.querySelector('.result-actions a[href^="/recommendations"]');
-	resultState.querySelector('.result-header .panel-lede').textContent = '';
-	factorList.innerHTML = '';
 	if (!errorState) {
 		errorState = document.createElement('div');
 		errorState.className = 'prediction-panel';
@@ -42,13 +40,26 @@
 		return [];
 	}
 
+	function formatFeatureName(feature) {
+		var rawName = String(feature || 'Model feature');
+		var isCategorical = rawName.indexOf('cat__') === 0;
+		var name = rawName.replace(/^(?:cat|num)__/, '');
+		var encodedCategory = isCategorical ? name.match(/^(.*)_(-?\d+(?:\.\d+)?)$/) : null;
+		if (encodedCategory) {
+			name = encodedCategory[1].replace(/_/g, ' ') + ' (encoded category ' + encodedCategory[2] + ')';
+		} else {
+			name = name.replace(/_/g, ' ');
+		}
+		return name.charAt(0).toUpperCase() + name.slice(1);
+	}
+
 	function renderFactors(factors) {
 		var list = factorList;
 		var entries = factorEntries(factors);
 		list.innerHTML = '';
 		if (!entries.length) {
 			var empty = document.createElement('p');
-			empty.textContent = 'The model did not provide contributing factors for this prediction.';
+			empty.textContent = 'The model did not return contributing factors for this prediction.';
 			list.appendChild(empty);
 			return;
 		}
@@ -58,8 +69,17 @@
 			var title = document.createElement('strong');
 			var detail = document.createElement('p');
 			card.className = 'factor-card';
-			title.textContent = String(item.feature || item.name || item.factor || 'Contributing factor');
-			detail.textContent = item.description ? String(item.description) : (item.value === undefined ? 'Supplied by the FINPATH explainability output.' : 'Model contribution: ' + String(item.value));
+			detail.className = 'factor-impact';
+			title.textContent = formatFeatureName(item.feature || item.name || item.factor);
+			if (typeof item.impact === 'number' && Number.isFinite(item.impact)) {
+				detail.textContent = 'SHAP impact for the predicted class: ' + (item.impact > 0 ? '+' : '') + item.impact.toFixed(4);
+			} else if (item.description) {
+				detail.textContent = String(item.description);
+			} else if (item.value !== undefined) {
+				detail.textContent = 'Model value: ' + String(item.value);
+			} else {
+				detail.textContent = 'The model identified this feature as relevant to the prediction.';
+			}
 			content.appendChild(title);
 			content.appendChild(detail);
 			card.appendChild(content);
@@ -71,6 +91,7 @@
 		var probability = percentage(prediction.probability);
 		var confidence = prediction.confidence === null || prediction.confidence === undefined ? null : percentage(prediction.confidence);
 		var riskLevel = String(prediction.risk_level || '');
+		var confidenceCard = document.querySelector('.confidence-card');
 		resultLede.textContent = String(prediction.explanation);
 		document.getElementById('result-heading').textContent = 'Your FINPATH prediction.';
 		riskBadge.textContent = riskLevel.charAt(0).toUpperCase() + riskLevel.slice(1) + ' risk';
@@ -82,15 +103,14 @@
 		document.querySelector('.tooltip-mark').setAttribute('aria-label', 'Probability returned by the FINPATH model.');
 		document.querySelector('.score-visual p').textContent = 'Probability returned by the FINPATH model.';
 		confidenceValue.textContent = confidence === null ? 'Not available' : String(confidence) + '%';
-		confidenceDescription.textContent = confidence === null ? 'Confidence was not supplied by the model.' : 'Confidence supplied by the FINPATH model.';
 		if (confidence !== null) {
+			confidenceCard.hidden = false;
+			confidenceDescription.textContent = 'Confidence supplied by the FINPATH model.';
 			confidenceTrack.setAttribute('aria-valuenow', String(confidence));
 			confidenceTrack.querySelector('span').style.width = confidence + '%';
 		}
 		else {
-			confidenceTrack.setAttribute('aria-valuenow', '0');
-			confidenceTrack.setAttribute('aria-label', 'Model confidence not available');
-			confidenceTrack.querySelector('span').style.width = '0%';
+			confidenceCard.hidden = true;
 		}
 		modelBadge.textContent = 'Model version ' + String(prediction.model_version);
 		document.querySelector('.factors-section .section-heading > p').textContent = 'These factors were supplied by the FINPATH model.';
