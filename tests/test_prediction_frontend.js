@@ -27,7 +27,15 @@ function createElement() {
 	};
 }
 
-test('prediction recommendations link includes the selected prediction ID', async () => {
+async function loadPrediction(search, latestPrediction = {
+	id: 42,
+	risk_level: 'medium',
+	probability: 0.5,
+	confidence: null,
+	explanation: 'Prediction explanation',
+	model_version: 'test',
+	contributing_factors: []
+}) {
 	const initialHref = predictionHtml.match(
 		/<a class="btn btn-primary" href="([^"]+)">View recommendations/
 	)[1];
@@ -58,19 +66,16 @@ test('prediction recommendations link includes the selected prediction ID', asyn
 		['.score-visual p', createElement()],
 		['.factors-section .section-heading > p', createElement()]
 	]);
+	const calls = { dashboard: 0 };
 	const window = {
-		location: { search: '?prediction_id=42' },
+		location: { search },
 		FinpathAPI: {
 			me: () => Promise.resolve({ id: 7 }),
-			getPrediction: () => Promise.resolve({
-				id: 42,
-				risk_level: 'medium',
-				probability: 0.5,
-				confidence: null,
-				explanation: 'Prediction explanation',
-				model_version: 'test',
-				contributing_factors: []
-			})
+			getPrediction: (id) => Promise.resolve({ ...latestPrediction, id }),
+			getDashboard: () => {
+				calls.dashboard += 1;
+				return Promise.resolve({ latest_prediction: latestPrediction });
+			}
 		}
 	};
 	const document = {
@@ -82,6 +87,29 @@ test('prediction recommendations link includes the selected prediction ID', asyn
 	assert.equal(initialHref, '/recommendations');
 	vm.runInNewContext(predictionScript, { window, document, URLSearchParams });
 	await new Promise((resolve) => setImmediate(resolve));
+	return { calls, errorState: elements['prediction-error'], link: recommendationsLink, resultState: elements['result-state'] };
+}
 
-	assert.equal(recommendationsLink.href, '/recommendations?prediction_id=42');
+test('prediction recommendations link includes the selected prediction ID', async () => {
+	const result = await loadPrediction('?prediction_id=42');
+
+	assert.equal(result.link.href, '/recommendations?prediction_id=42');
+	assert.equal(result.calls.dashboard, 0);
+});
+
+test('prediction page loads the signed-in user latest result when no ID is selected', async () => {
+	const result = await loadPrediction('');
+
+	assert.equal(result.calls.dashboard, 1);
+	assert.equal(result.resultState.hidden, false);
+	assert.equal(result.link.href, '/recommendations?prediction_id=42');
+});
+
+test('prediction page explains when the user has no prediction yet', async () => {
+	const result = await loadPrediction('', null);
+
+	assert.equal(result.calls.dashboard, 1);
+	assert.equal(result.resultState.hidden, true);
+	assert.equal(result.errorState.hidden, false);
+	assert.match(result.errorState.textContent, /complete an assessment/i);
 });

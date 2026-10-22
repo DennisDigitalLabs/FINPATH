@@ -104,13 +104,18 @@
 	function loadPrediction() {
 		var predictionId = params.get('prediction_id');
 		var assessmentId = params.get('assessment_id');
-		if (!predictionId && !assessmentId) { showError('No prediction was selected. Complete an assessment first.'); return; }
 		window.FinpathAPI.me().then(function () {
 			processingStatus.textContent = 'Loading your model result...';
 			if (predictionId) return window.FinpathAPI.getPrediction(predictionId);
-			return window.FinpathAPI.listPredictions(assessmentId).then(function (predictions) {
-				if (!predictions || !predictions.length) { throw new Error('No prediction was found for that assessment.'); }
-				return predictions[0];
+			if (assessmentId) {
+				return window.FinpathAPI.listPredictions(assessmentId).then(function (predictions) {
+					if (!predictions || !predictions.length) { throw new Error('No prediction was found for that assessment.'); }
+					return predictions[0];
+				});
+			}
+			return window.FinpathAPI.getDashboard().then(function (dashboard) {
+				if (!dashboard.latest_prediction) throw new Error('No prediction is available yet. Complete an assessment first.');
+				return dashboard.latest_prediction;
 			});
 		}).then(renderPrediction).catch(function (reason) {
 			if (reason && reason.status === 401) { window.location.href = '/login?next=/prediction'; return; }

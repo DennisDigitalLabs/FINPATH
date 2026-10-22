@@ -87,7 +87,7 @@ function executeLogin(next) {
 	return new Promise((resolve) => setImmediate(() => resolve(window.location.href)));
 }
 
-function executeRecommendations(search, token = 'test-token', scopedRequestFails = false) {
+function executeRecommendations(search, token = 'test-token', scopedRequestFails = false, latestPrediction = { id: 42 }) {
 	const ids = [
 		'recommendation-list',
 		'category-filter',
@@ -110,12 +110,17 @@ function executeRecommendations(search, token = 'test-token', scopedRequestFails
 		['.summary-note', createElement()],
 		['.summary-track', createElement()]
 	]);
-	const calls = { scoped: [], unfiltered: 0 };
+	const calls = { dashboard: 0, scoped: [], unfiltered: 0 };
 	const window = {
 		location: { search, href: '' },
+		history: { replaceState(_state, _title, url) { window.location.href = url; } },
 		FinpathAPI: {
 			getToken: () => token,
 			me: () => Promise.resolve({ id: 1 }),
+			getDashboard: () => {
+				calls.dashboard += 1;
+				return Promise.resolve({ latest_prediction: latestPrediction });
+			},
 			listRecommendations: () => {
 				calls.unfiltered += 1;
 				return Promise.resolve([]);
@@ -172,6 +177,26 @@ test('valid prediction ID uses the scoped API and never lists all recommendation
 
 	assert.deepEqual(calls.scoped, [42]);
 	assert.equal(calls.unfiltered, 0);
+	assert.equal(calls.dashboard, 0);
+});
+
+test('recommendations page uses the latest prediction when no ID is selected', async () => {
+	const { calls, window } = await executeRecommendations('');
+
+	assert.deepEqual(calls.scoped, [42]);
+	assert.equal(calls.unfiltered, 0);
+	assert.equal(calls.dashboard, 1);
+	assert.equal(window.location.href, '/recommendations?prediction_id=42');
+});
+
+test('recommendations page shows an empty-state message when no prediction exists', async () => {
+	const { calls, elements } = await executeRecommendations('', 'test-token', false, null);
+
+	assert.deepEqual(calls.scoped, []);
+	assert.equal(calls.unfiltered, 0);
+	assert.equal(calls.dashboard, 1);
+	assert.equal(elements['recommendation-error'].hidden, false);
+	assert.match(elements['recommendation-error'].textContent, /complete an assessment/i);
 });
 
 test('scoped request failure shows an error without falling back to the unfiltered API', async () => {
@@ -211,8 +236,15 @@ test('unsafe and invalid recommendation return destinations use the safe fallbac
 	}
 });
 
+test('unauthenticated recommendations without a selected prediction use a safe login destination', async () => {
+	const { window } = await executeRecommendations('', null);
+	const loginUrl = new URL(window.location.href, 'https://finpath.example.test');
+
+	assert.equal(loginUrl.pathname, '/login');
+	assert.equal(loginUrl.searchParams.get('next'), '/recommendations');
+});
+
 for (const [description, search] of [
-	['missing', ''],
 	['non-numeric', '?prediction_id=42x'],
 	['zero', '?prediction_id=0'],
 	['unsafe integer', '?prediction_id=9007199254740992']

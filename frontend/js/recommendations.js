@@ -27,7 +27,9 @@
 	}
 
 	function loginHref() {
-		var returnPath = '/recommendations?prediction_id=' + encodeURIComponent(rawPredictionId);
+		var returnPath = rawPredictionId
+			? '/recommendations?prediction_id=' + encodeURIComponent(rawPredictionId)
+			: '/recommendations';
 		return '/login?next=' + encodeURIComponent(returnPath);
 	}
 
@@ -146,7 +148,7 @@
 	});
 	filter.addEventListener('change', render);
 
-	if (!Number.isSafeInteger(predictionId) || predictionId <= 0) {
+	if (rawPredictionId && (!Number.isSafeInteger(predictionId) || predictionId <= 0)) {
 		showError('A valid prediction was not selected. Return to your dashboard and open a prediction first.');
 		return;
 	}
@@ -156,6 +158,19 @@
 		return;
 	}
 	window.FinpathAPI.me().then(function () {
+		if (!rawPredictionId) {
+			return window.FinpathAPI.getDashboard().then(function (dashboard) {
+				if (!dashboard.latest_prediction) {
+					throw new Error('No recommendations are available until you complete an assessment.');
+				}
+				predictionId = dashboard.latest_prediction.id;
+				var returnPath = '/recommendations?prediction_id=' + encodeURIComponent(predictionId);
+				window.history.replaceState(null, '', returnPath);
+				return predictionId;
+			});
+		}
+		return predictionId;
+	}).then(function () {
 		return window.FinpathAPI.listRecommendationsForPrediction(predictionId);
 	}).then(function (result) {
 		if (!Array.isArray(result)) throw new Error('The recommendations response was invalid. Please try again.');
