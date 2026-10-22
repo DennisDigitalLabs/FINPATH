@@ -10,6 +10,18 @@ const authScript = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'js', 'auth.js'),
 	'utf8'
 );
+const apiScript = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'js', 'api.js'),
+	'utf8'
+);
+const landingHtml = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'index.html'),
+	'utf8'
+);
+const dashboardHtml = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'dashboard.html'),
+	'utf8'
+);
 const registerHtml = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'register.html'),
 	'utf8'
@@ -102,4 +114,53 @@ test('registration does not require acknowledgement of unpublished policy pages'
 	assert.doesNotMatch(registerHtml, /name="terms"/);
 	assert.doesNotMatch(registerHtml, /href="#(?:terms|privacy)"/);
 	assert.doesNotMatch(authScript, /a\[href="#terms"\]/);
+});
+
+function createApiHarness(responseStatus, responseBody) {
+	const values = new Map();
+	const storage = {
+		getItem(key) { return values.get(key) || null; },
+		setItem(key, value) { values.set(key, value); },
+		removeItem(key) { values.delete(key); }
+	};
+	const window = {
+		FINPATH_CONFIG: { API_BASE_URL: 'https://api.example.invalid' },
+		localStorage: storage,
+		sessionStorage: storage,
+		fetch() {
+			return Promise.resolve({
+				ok: responseStatus >= 200 && responseStatus < 300,
+				status: responseStatus,
+				text() { return Promise.resolve(JSON.stringify(responseBody)); }
+			});
+		}
+	};
+	vm.runInNewContext(apiScript, { window });
+	return { api: window.FinpathAPI, storage };
+}
+
+test('login 401 reports incorrect credentials without clearing an existing session', async () => {
+	const { api, storage } = createApiHarness(401, { detail: 'Invalid email or password' });
+	storage.setItem('finpath_access_token', 'existing-session');
+
+	await assert.rejects(api.login({ email: 'user@example.invalid', password: 'wrong' }), {
+		message: 'Incorrect email or password.'
+	});
+	assert.equal(api.getToken(), 'existing-session');
+});
+
+test('protected-resource 401 still reports an expired session and clears its token', async () => {
+	const { api, storage } = createApiHarness(401, { detail: 'Not authenticated' });
+	storage.setItem('finpath_access_token', 'expired-session');
+
+	await assert.rejects(api.getAuthenticated('/api/v1/auth/me'), {
+		message: 'Your session has expired. Please sign in again.'
+	});
+	assert.equal(api.getToken(), null);
+});
+
+test('landing and dashboard provide the requested navigation links', () => {
+	assert.match(landingHtml, /class="btn btn-outline nav-admin" href="\/admin">Admin<\/a>/);
+	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin">Admin<\/a>/);
+	assert.match(dashboardHtml, /class="nav-link" href="\/">Home<\/a>/);
 });

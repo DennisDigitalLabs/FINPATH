@@ -22,7 +22,8 @@
 		window.sessionStorage.removeItem(tokenStorageKey);
 	}
 
-	function errorMessage(status, payload) {
+	function errorMessage(status, payload, path) {
+		if (status === 401 && path === '/api/v1/auth/login') return 'Incorrect email or password.';
 		if (status === 401) return 'Your session has expired. Please sign in again.';
 		if (status === 403) return 'You are not authorized to perform this action.';
 		if (status === 422) {
@@ -54,8 +55,9 @@
 				var payload = null;
 				try { payload = text ? JSON.parse(text) : null; } catch (error) { payload = null; }
 				if (!response.ok) {
-					if (response.status === 401) clearToken();
-					var apiError = new Error(errorMessage(response.status, payload));
+					var isLoginRequest = path === '/api/v1/auth/login';
+					if (response.status === 401 && !isLoginRequest) clearToken();
+					var apiError = new Error(errorMessage(response.status, payload, path));
 					apiError.name = 'FinpathApiError';
 					apiError.status = response.status;
 					apiError.detail = payload && payload.detail;
