@@ -11,6 +11,9 @@
 	var healthState = document.getElementById('health-state');
 	var usersBody = document.getElementById('admin-users-body');
 	var usersTable = document.getElementById('admin-users-table');
+	var createUserForm = document.getElementById('create-user-form');
+	var createUserState = document.getElementById('create-user-state');
+	var createUserButton = document.getElementById('create-user-submit');
 
 	function setMessage(element, message, isError) {
 		element.textContent = message;
@@ -225,6 +228,35 @@
 	}
 
 	document.getElementById('refresh-admin').addEventListener('click', refresh);
+	createUserForm.addEventListener('submit', function (event) {
+		event.preventDefault();
+		var user = {
+			full_name: createUserForm.elements.full_name.value.trim(),
+			email: createUserForm.elements.email.value.trim(),
+			password: createUserForm.elements.password.value
+		};
+		createUserButton.disabled = true;
+		setMessage(createUserState, 'Creating account…', false);
+		window.FinpathAPI.createAdminUser(user).then(function () {
+			createUserForm.reset();
+			currentPage = 1;
+			currentSearch = '';
+			document.getElementById('user-search').value = '';
+			setMessage(createUserState, 'Account created. The user can now sign in.', false);
+			loadUsers();
+			loadAnalytics();
+		}).catch(function (reason) {
+			if (!handleFailure(reason, createUserState, 'The account could not be created.')) {
+				setMessage(
+					createUserState,
+					reason && reason.message ? reason.message : 'The account could not be created.',
+					true
+				);
+			}
+		}).finally(function () {
+			createUserButton.disabled = false;
+		});
+	});
 	document.getElementById('admin-logout').addEventListener('click', function () {
 		window.FinpathAPI.clearToken();
 		window.location.href = '/login';

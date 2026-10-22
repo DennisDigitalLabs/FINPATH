@@ -118,6 +118,7 @@
 		getAnalytics: function () { return get('/api/v1/analytics'); },
 		getSystemAnalytics: function () { return get('/api/v1/analytics/system'); },
 		getAdminHealth: function () { return get('/api/v1/admin/health'); },
+		createAdminUser: function (user) { return post('/api/v1/admin/users', user); },
 		listAdminUsers: function (search, page, pageSize) {
 			var params = new URLSearchParams();
 			if (search) params.set('search', search);

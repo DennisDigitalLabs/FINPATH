@@ -442,6 +442,52 @@ def test_admin_user_search_is_paginated_and_never_returns_credentials(client, db
     ).status_code == 422
 
 
+def test_admin_can_create_standard_user_account_that_can_sign_in(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
+    response = client.post(
+        "/api/v1/admin/users",
+        json={
+            "full_name": "Created User",
+            "email": "created@example.com",
+            "password": "CreatedUser123",
+        },
+        headers=headers,
+    )
+
+    assert response.status_code == 201
+    created = response.json()
+    assert created["full_name"] == "Created User"
+    assert created["email"] == "created@example.com"
+    assert created["role"] == "user"
+    assert created["is_active"] is True
+    assert "hashed_password" not in created
+    assert client.post(
+        "/api/v1/auth/login",
+        json={"email": "created@example.com", "password": "CreatedUser123"},
+    ).status_code == 200
+    assert client.post(
+        "/api/v1/admin/users",
+        json={
+            "full_name": "Duplicate User",
+            "email": "created@example.com",
+            "password": "AnotherUser123",
+        },
+        headers=headers,
+    ).status_code == 409
+    assert client.post(
+        "/api/v1/admin/users",
+        json={
+            "full_name": "Privilege Escalation",
+            "email": "escalation@example.com",
+            "password": "Escalation123",
+            "role": "admin",
+        },
+        headers=headers,
+    ).status_code == 422
+
+
 def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, monkeypatch):
     _configure_admin_owner(monkeypatch, "owner@example.com")
     admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
@@ -536,6 +582,11 @@ def test_all_admin_routes_require_owner_authorization(client, db, monkeypatch):
         "Authorization": f"Bearer {_login(client, other_admin.email, 'DifferentAdmin123')}"
     }
     routes = [
+        ("post", "/api/v1/admin/users", {
+            "full_name": "Authorized Created User",
+            "email": "created-by-admin@example.com",
+            "password": "CreatedByAdmin123",
+        }),
         ("get", "/api/v1/admin/users", None),
         ("get", "/api/v1/admin/health", None),
         ("patch", f"/api/v1/admin/users/{normal_user.id}/status", {"is_active": True}),
@@ -545,7 +596,8 @@ def test_all_admin_routes_require_owner_authorization(client, db, monkeypatch):
         kwargs = {"headers": owner_headers}
         if body is not None:
             kwargs["json"] = body
-        assert request(path, **kwargs).status_code == 200
+        expected = 201 if method == "post" else 200
+        assert request(path, **kwargs).status_code == expected
 
         kwargs["headers"] = user_headers
         assert request(path, **kwargs).status_code == 403

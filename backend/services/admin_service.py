@@ -2,6 +2,12 @@ from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from backend.models import User
+from backend.schemas.user import UserCreate
+from backend.services.auth_service import register_user
+
+
+def create_standard_user(db: Session, user_data: UserCreate) -> User:
+	return register_user(db, user_data)
 
 
 def list_admin_users(

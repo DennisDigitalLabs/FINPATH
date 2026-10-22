@@ -32,6 +32,17 @@
 			</section>
 			<section class="admin-section admin-operation-section" id="health-section" aria-labelledby="health-heading"><div class="section-heading"><div><p class="eyebrow">Service status</p><h2 id="health-heading">System health</h2></div></div><div id="health-state" class="admin-empty-copy" role="status" aria-live="polite">Checking backend and database…</div></section>
 			<section class="admin-section admin-operation-section" id="users-section" aria-labelledby="users-heading"><div class="section-heading"><div><p class="eyebrow">Accounts</p><h2 id="users-heading">User management</h2></div><span class="summary-note" id="users-summary">Loading accounts…</span></div>
+				<form id="create-user-form" class="admin-create-user">
+					<h3>Create a user account</h3>
+					<div class="admin-create-user-fields">
+						<label>Full name<input name="full_name" type="text" maxlength="255" autocomplete="name" required></label>
+						<label>Email<input name="email" type="email" maxlength="255" autocomplete="email" required></label>
+						<label>Password<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+					</div>
+					<p class="admin-create-user-help">Creates a standard user account. Passwords must contain at least one letter and one number.</p>
+					<button class="btn btn-primary" id="create-user-submit" type="submit">Create account</button>
+					<p class="admin-create-user-state" id="create-user-state" role="status" aria-live="polite"></p>
+				</form>
 				<form id="user-search-form" class="admin-search"><label for="user-search">Search name or email</label><input id="user-search" name="search" type="search" maxlength="100" autocomplete="off"><button class="btn btn-primary" type="submit">Search</button><button class="btn btn-outline" id="clear-user-search" type="button">Clear</button></form>
 				<div id="user-list-state" class="admin-empty-copy" role="status" aria-live="polite">Loading accounts…</div>
 				<div class="table-wrap"><table id="admin-users-table" hidden><thead><tr><th scope="col">Account</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody id="admin-users-body"></tbody></table></div>

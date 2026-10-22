@@ -2,6 +2,12 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, EmailStr, StrictBool
 
+from backend.schemas.user import UserCreate
+
+
+class AdminManagedUserCreate(UserCreate):
+	"""Validated details for an admin-created standard user account."""
+
 
 class AdminUserResponse(BaseModel):
 	model_config = ConfigDict(from_attributes=True)

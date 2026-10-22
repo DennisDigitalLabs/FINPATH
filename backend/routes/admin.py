@@ -2,6 +2,7 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
@@ -9,12 +10,14 @@ from sqlalchemy.orm import Session
 from backend.dependencies import get_current_admin, get_db
 from backend.models import User
 from backend.schemas.admin import (
+	AdminManagedUserCreate,
 	AdminHealthResponse,
 	AdminUserListResponse,
 	AdminUserResponse,
 	AdminUserStatusUpdate,
 )
 from backend.services.admin_service import (
+	create_standard_user,
 	list_admin_users,
 	update_user_active_status,
 )
@@ -22,6 +25,31 @@ from backend.services.admin_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["administration"])
+
+
+@router.post(
+	"/users",
+	response_model=AdminUserResponse,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_user(
+	user_data: AdminManagedUserCreate,
+	db: Session = Depends(get_db),
+	_admin: User = Depends(get_current_admin),
+) -> User:
+	try:
+		return create_standard_user(db, user_data)
+	except ValueError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail=str(exc),
+		) from exc
+	except IntegrityError as exc:
+		db.rollback()
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail="An account with this email already exists",
+		) from exc
 
 
 @router.get("/users", response_model=AdminUserListResponse)
