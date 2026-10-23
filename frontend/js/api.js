@@ -25,6 +25,7 @@
 	function errorMessage(status, payload, path) {
 		if (status === 401 && path === '/api/v1/auth/login') return 'Incorrect email or password.';
 		if (status === 401) return 'Your session has expired. Please sign in again.';
+		if (status === 403 && path === '/api/v1/admin/bootstrap') return 'The setup token is incorrect.';
 		if (status === 403) return 'You are not authorized to perform this action.';
 		if (status === 422) {
 			if (Array.isArray(payload && payload.detail)) {
@@ -118,6 +119,8 @@
 		getAnalytics: function () { return get('/api/v1/analytics'); },
 		getSystemAnalytics: function () { return get('/api/v1/analytics/system'); },
 		getAdminHealth: function () { return get('/api/v1/admin/health'); },
+		getAdminBootstrapStatus: function () { return get('/api/v1/admin/bootstrap/status'); },
+		createFirstAdmin: function (admin) { return post('/api/v1/admin/bootstrap', admin); },
 		createAdminUser: function (user) { return post('/api/v1/admin/users', user); },
 		createAdminAccount: function (admin) { return post('/api/v1/admin/admins', admin); },
 		listAdminUsers: function (search, page, pageSize) {

@@ -17,6 +17,12 @@
 	var createAdminForm = document.getElementById('create-admin-form');
 	var createAdminState = document.getElementById('create-admin-state');
 	var createAdminButton = document.getElementById('create-admin-submit');
+	var adminDashboard = document.getElementById('admin-dashboard');
+	var firstAdminSetup = document.getElementById('first-admin-setup');
+	var firstAdminForm = document.getElementById('first-admin-form');
+	var firstAdminState = document.getElementById('first-admin-state');
+	var firstAdminButton = document.getElementById('first-admin-submit');
+	var bootstrapUnavailable = document.getElementById('admin-bootstrap-unavailable');
 
 	function setMessage(element, message, isError) {
 		element.textContent = message;
@@ -38,6 +44,13 @@
 		layout.className = 'container admin-denied';
 		layout.replaceChildren(errorState, homeLink);
 		document.querySelector('.admin-header').remove();
+	}
+
+	function showBootstrapUnavailable(message) {
+		firstAdminSetup.hidden = false;
+		firstAdminForm.hidden = true;
+		bootstrapUnavailable.textContent = message;
+		bootstrapUnavailable.hidden = false;
 	}
 
 	function handleFailure(reason, element, fallback) {
@@ -231,6 +244,31 @@
 	}
 
 	document.getElementById('refresh-admin').addEventListener('click', refresh);
+	firstAdminForm.addEventListener('submit', function (event) {
+		event.preventDefault();
+		var admin = {
+			full_name: firstAdminForm.elements.full_name.value.trim(),
+			email: firstAdminForm.elements.email.value.trim(),
+			password: firstAdminForm.elements.password.value,
+			bootstrap_token: firstAdminForm.elements.bootstrap_token.value,
+			confirm_existing_owner: firstAdminForm.elements.confirm_existing_owner.checked
+		};
+		firstAdminButton.disabled = true;
+		setMessage(firstAdminState, 'Creating the first administrator account…', false);
+		window.FinpathAPI.createFirstAdmin(admin).then(function () {
+			firstAdminForm.reset();
+			setMessage(firstAdminState, 'Administrator account created. Redirecting to sign in…', false);
+			window.location.href = '/login?next=%2Fadmin';
+		}).catch(function (reason) {
+			setMessage(
+				firstAdminState,
+				reason && reason.message ? reason.message : 'The first administrator account could not be created.',
+				true
+			);
+		}).finally(function () {
+			firstAdminButton.disabled = false;
+		});
+	});
 	createUserForm.addEventListener('submit', function (event) {
 		event.preventDefault();
 		var user = {
@@ -331,6 +369,8 @@
 	});
 
 	function load() {
+		adminDashboard.hidden = false;
+		document.querySelector('.admin-header').hidden = false;
 		if (!window.FinpathAPI.getToken()) {
 			window.location.href = '/login?next=/admin';
 			return;
@@ -350,5 +390,30 @@
 		});
 	}
 
-	load();
+	window.FinpathAPI.getAdminBootstrapStatus().then(function (bootstrapStatus) {
+		if (!bootstrapStatus || typeof bootstrapStatus.setup_available !== 'boolean' ||
+			typeof bootstrapStatus.administrator_exists !== 'boolean' ||
+			typeof bootstrapStatus.setup_configured !== 'boolean') {
+			throw new Error('The administrator setup status response was invalid.');
+		}
+		if (bootstrapStatus.setup_available) {
+			firstAdminSetup.hidden = false;
+			return;
+		}
+		if (bootstrapStatus.administrator_exists) {
+			load();
+			return;
+		}
+		showBootstrapUnavailable(
+			bootstrapStatus.setup_configured
+				? 'First administrator setup is unavailable because the configured owner account needs trusted operator review.'
+				: 'First administrator setup is not configured. Please contact the system administrator.'
+		);
+	}).catch(function (reason) {
+		showBootstrapUnavailable(
+			reason && reason.message
+				? reason.message
+				: 'Administrator setup status could not be checked. Please try again later.'
+		);
+	});
 }());

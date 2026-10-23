@@ -2,14 +2,15 @@ import logging
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy import text
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import DBAPIError, IntegrityError, SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.dependencies import get_current_admin, get_db
 from backend.models import User
 from backend.schemas.admin import (
+	AdminBootstrapCreate,
+	AdminBootstrapStatus,
 	AdminManagedUserCreate,
 	AdminHealthResponse,
 	AdminUserListResponse,
@@ -17,6 +18,12 @@ from backend.schemas.admin import (
 	AdminUserStatusUpdate,
 )
 from backend.schemas.user import AdminCreate
+from backend.services.admin_bootstrap_service import (
+	AdminBootstrapAuthorizationError,
+	AdminBootstrapUnavailableError,
+	bootstrap_first_admin,
+	get_first_admin_setup_status,
+)
 from backend.services.admin_service import (
 	create_admin_account,
 	create_standard_user,
@@ -27,6 +34,60 @@ from backend.services.admin_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["administration"])
+
+
+@router.get("/bootstrap/status", response_model=AdminBootstrapStatus)
+def admin_bootstrap_status(
+	db: Session = Depends(get_db),
+) -> AdminBootstrapStatus:
+	return AdminBootstrapStatus(**get_first_admin_setup_status(db))
+
+
+@router.post(
+	"/bootstrap",
+	response_model=AdminUserResponse,
+	status_code=status.HTTP_201_CREATED,
+)
+def create_first_admin(
+	admin_data: AdminBootstrapCreate,
+	db: Session = Depends(get_db),
+) -> User:
+	try:
+		return bootstrap_first_admin(
+			db,
+			admin_data,
+			admin_data.bootstrap_token,
+			admin_data.confirm_existing_owner,
+		)
+	except AdminBootstrapAuthorizationError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_403_FORBIDDEN,
+			detail="Bootstrap authorization failed.",
+		) from exc
+	except AdminBootstrapUnavailableError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail=str(exc),
+		) from exc
+	except ValueError as exc:
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail=str(exc),
+		) from exc
+	except IntegrityError as exc:
+		db.rollback()
+		raise HTTPException(
+			status_code=status.HTTP_409_CONFLICT,
+			detail="First administrator setup has already been completed.",
+		) from exc
+	except DBAPIError as exc:
+		db.rollback()
+		if "database is locked" in str(exc.orig).lower():
+			raise HTTPException(
+				status_code=status.HTTP_409_CONFLICT,
+				detail="First administrator setup is in progress. Please retry shortly.",
+			) from exc
+		raise
 
 
 @router.post(

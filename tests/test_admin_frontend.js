@@ -48,11 +48,23 @@ function createAdminPage() {
 		'create-user-submit', 'create-user-state', 'create-admin-form',
 		'create-admin-submit', 'create-admin-state', 'user-search-form',
 		'user-search', 'clear-user-search', 'users-previous', 'users-next',
+		'admin-dashboard', 'first-admin-setup', 'first-admin-form',
+		'first-admin-state', 'first-admin-submit', 'admin-bootstrap-unavailable',
 		'assessment-distribution', 'risk-distribution', 'generated-at',
 		'users-summary', 'user-page-summary'
 	];
 	const elements = new Map(ids.map((id) => [id, createElement()]));
 	elements.get('user-search').value = '';
+	elements.get('admin-dashboard').hidden = true;
+	elements.get('first-admin-setup').hidden = true;
+	elements.get('first-admin-form').elements = {
+		full_name: { value: 'First Owner' },
+		email: { value: 'owner@example.com' },
+		password: { value: 'FirstOwner123' },
+		bootstrap_token: { value: 'temporary-bootstrap-token' },
+		confirm_existing_owner: { checked: false }
+	};
+	elements.get('first-admin-form').reset = function () { this.wasReset = true; };
 	elements.get('create-user-form').elements = {
 		full_name: { value: 'New Member' },
 		email: { value: 'new-member@example.com' },
@@ -93,6 +105,11 @@ test('admin page denies a normal account before requesting administrative data',
 		location: { href: '' },
 		FinpathAPI: {
 			getToken: () => 'user-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
 			me: () => Promise.resolve({ role: 'user' }),
 			getSystemAnalytics() { assert.fail('analytics must not be requested for normal users'); }
 		}
@@ -105,6 +122,40 @@ test('admin page denies a normal account before requesting administrative data',
 	assert.match(page.layout.children[0].textContent, /Administrator access is required/i);
 	assert.equal(page.layout.children[1].href, '/');
 	assert.equal(page.header.removed, true);
+});
+
+test('admin page shows the first-owner form and redirects after successful setup', async () => {
+	const page = createAdminPage();
+	let submitted;
+	const window = {
+		location: { href: '' },
+		FinpathAPI: {
+			getToken: () => null,
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: true,
+				administrator_exists: false,
+				setup_configured: true
+			}),
+			createFirstAdmin(admin) { submitted = admin; return Promise.resolve({ role: 'admin' }); }
+		}
+	};
+
+	vm.runInNewContext(adminScript, { window, document: page.document });
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(page.elements.get('first-admin-setup').hidden, false);
+	assert.equal(page.elements.get('admin-dashboard').hidden, true);
+
+	page.elements.get('first-admin-form').listeners.submit({ preventDefault() {} });
+	await new Promise((resolve) => setImmediate(resolve));
+	assert.equal(JSON.stringify(submitted), JSON.stringify({
+		full_name: 'First Owner',
+		email: 'owner@example.com',
+		password: 'FirstOwner123',
+		bootstrap_token: 'temporary-bootstrap-token',
+		confirm_existing_owner: false
+	}));
+	assert.equal(page.elements.get('first-admin-form').wasReset, true);
+	assert.equal(window.location.href, '/login?next=%2Fadmin');
 });
 
 test('authorized admin loads real overview, health, and paginated account data', async () => {
@@ -123,6 +174,11 @@ test('authorized admin loads real overview, health, and paginated account data',
 		confirm: () => true,
 		FinpathAPI: {
 			getToken: () => 'owner-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
 			me: () => Promise.resolve({ role: 'admin' }),
 			getSystemAnalytics: () => Promise.resolve({
 				user_count: 2,
@@ -176,6 +232,11 @@ test('admin distinguishes empty accounts and unavailable services from loaded da
 		location: { href: '' },
 		FinpathAPI: {
 			getToken: () => 'owner-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
 			me: () => Promise.resolve({ role: 'admin' }),
 			getSystemAnalytics: () => Promise.reject(Object.assign(new Error('Analytics unavailable'), { status: 503 })),
 			getAdminHealth: () => Promise.reject(Object.assign(new Error('Database health check failed'), { status: 503 })),
@@ -200,6 +261,11 @@ test('admin account form submits to the API and confirms only after success', as
 		location: { href: '' },
 		FinpathAPI: {
 			getToken: () => 'owner-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
 			me: () => Promise.resolve({ role: 'admin' }),
 			getSystemAnalytics: () => Promise.resolve({
 				user_count: 1,
@@ -281,6 +347,14 @@ test('admin API client uses search pagination and persisted status endpoint', as
 		password: 'NewAdmin123'
 	});
 	await window.FinpathAPI.setAdminUserActive(9, false);
+	await window.FinpathAPI.getAdminBootstrapStatus();
+	await window.FinpathAPI.createFirstAdmin({
+		full_name: 'First Owner',
+		email: 'owner@example.com',
+		password: 'FirstOwner123',
+		bootstrap_token: 'temporary-bootstrap-token',
+		confirm_existing_owner: false
+	});
 
 	assert.match(calls[0].url, /\/api\/v1\/admin\/users\?search=Alice\+Smith&page=2&page_size=20$/);
 	assert.equal(calls[0].options.method, 'GET');
@@ -293,6 +367,11 @@ test('admin API client uses search pagination and persisted status endpoint', as
 	assert.equal(calls[3].url, 'https://api.example.invalid/api/v1/admin/users/9/status');
 	assert.equal(calls[3].options.method, 'PATCH');
 	assert.equal(calls[3].options.body, '{"is_active":false}');
+	assert.equal(calls[4].url, 'https://api.example.invalid/api/v1/admin/bootstrap/status');
+	assert.equal(calls[4].options.method, 'GET');
+	assert.equal(calls[5].url, 'https://api.example.invalid/api/v1/admin/bootstrap');
+	assert.equal(calls[5].options.method, 'POST');
+	assert.equal(calls[5].options.body, '{"full_name":"First Owner","email":"owner@example.com","password":"FirstOwner123","bootstrap_token":"temporary-bootstrap-token","confirm_existing_owner":false}');
 });
 
 test('admin page exposes working search, pagination, health, refresh, and logout controls', () => {
@@ -301,6 +380,8 @@ test('admin page exposes working search, pagination, health, refresh, and logout
 	assert.match(adminHtml, /id="user-search-form"/);
 	assert.match(adminHtml, /id="create-user-form"/);
 	assert.match(adminHtml, /id="create-admin-form"/);
+	assert.match(adminHtml, /id="first-admin-form"/);
+	assert.match(adminHtml, /Create First Admin Account/);
 	assert.match(adminHtml, /id="users-previous"/);
 	assert.match(adminHtml, /id="users-next"/);
 	assert.match(adminHtml, /id="health-section"/);

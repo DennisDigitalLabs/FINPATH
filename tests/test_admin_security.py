@@ -262,6 +262,215 @@ def test_admin_bootstrap_rejects_wrong_email_and_bootstrap_token(db, monkeypatch
     assert db.query(User).count() == 0
 
 
+def test_web_first_admin_bootstrap_creates_owner_once_and_allows_login(
+    client, db, monkeypatch
+):
+    _configure_admin_owner(monkeypatch, "web-owner@example.com")
+    status_before = client.get("/api/v1/admin/bootstrap/status")
+    assert status_before.status_code == 200
+    assert status_before.json() == {
+        "setup_available": True,
+        "administrator_exists": False,
+        "setup_configured": True,
+    }
+
+    response = client.post(
+        "/api/v1/admin/bootstrap",
+        json={
+            "full_name": "Web Owner",
+            "email": "WEB-OWNER@example.com",
+            "password": "WebOwner123",
+            "bootstrap_token": "test-only-bootstrap-token-with-32-chars",
+        },
+    )
+    assert response.status_code == 201
+    assert response.json()["role"] == "admin"
+    assert "hashed_password" not in response.json()
+
+    owner = db.query(User).filter(User.email == "web-owner@example.com").one()
+    assert owner.is_active is True
+    assert owner.hashed_password != "WebOwner123"
+    assert verify_password("WebOwner123", owner.hashed_password)
+    token = _login(client, owner.email, "WebOwner123")
+    assert client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {token}"},
+    ).status_code == 200
+
+    status_after = client.get("/api/v1/admin/bootstrap/status")
+    assert status_after.status_code == 200
+    assert status_after.json() == {
+        "setup_available": False,
+        "administrator_exists": True,
+        "setup_configured": True,
+    }
+    repeated = client.post(
+        "/api/v1/admin/bootstrap",
+        json={
+            "full_name": "Web Owner",
+            "email": "web-owner@example.com",
+            "password": "WebOwner123",
+            "bootstrap_token": "test-only-bootstrap-token-with-32-chars",
+        },
+    )
+    assert repeated.status_code == 409
+    assert count_admin_users(db) == 1
+
+
+def test_web_first_admin_bootstrap_rejects_invalid_token_and_non_owner_email(
+    client, db, monkeypatch
+):
+    _configure_admin_owner(monkeypatch, "web-owner@example.com")
+    payload = {
+        "full_name": "Attacker",
+        "email": "web-owner@example.com",
+        "password": "Attacker123",
+        "bootstrap_token": "incorrect-bootstrap-token",
+    }
+    invalid_token = client.post("/api/v1/admin/bootstrap", json=payload)
+    assert invalid_token.status_code == 403
+    assert invalid_token.json()["detail"] == "Bootstrap authorization failed."
+    assert db.query(User).count() == 0
+
+    payload["email"] = "attacker@example.com"
+    payload["bootstrap_token"] = "test-only-bootstrap-token-with-32-chars"
+    wrong_email = client.post("/api/v1/admin/bootstrap", json=payload)
+    assert wrong_email.status_code == 409
+    assert db.query(User).count() == 0
+
+
+def test_web_first_admin_bootstrap_requires_valid_owner_configuration(
+    client, db, monkeypatch
+):
+    settings = SimpleNamespace(
+        ADMIN_OWNER_EMAIL="not-an-email",
+        ADMIN_BOOTSTRAP_TOKEN="test-only-bootstrap-token-with-32-chars",
+    )
+    monkeypatch.setattr(admin_bootstrap_service, "get_settings", lambda: settings)
+
+    status_response = client.get("/api/v1/admin/bootstrap/status")
+    assert status_response.status_code == 200
+    assert status_response.json() == {
+        "setup_available": False,
+        "administrator_exists": False,
+        "setup_configured": False,
+    }
+    response = client.post(
+        "/api/v1/admin/bootstrap",
+        json={
+            "full_name": "Owner",
+            "email": "owner@example.com",
+            "password": "OwnerPassword123",
+            "bootstrap_token": "test-only-bootstrap-token-with-32-chars",
+        },
+    )
+    assert response.status_code == 409
+    assert db.query(User).count() == 0
+
+
+def test_web_first_admin_bootstrap_requires_explicit_confirmation_to_repair_owner(
+    client, db, monkeypatch
+):
+    _configure_admin_owner(monkeypatch, "existing-owner@example.com")
+    existing = register_user(
+        db,
+        UserCreate(
+            full_name="Existing Owner",
+            email="existing-owner@example.com",
+            password="ExistingOwner123",
+        ),
+    )
+    original_hash = existing.hashed_password
+    payload = {
+        "full_name": "Existing Owner",
+        "email": "existing-owner@example.com",
+        "password": "NewOwnerPassword123",
+        "bootstrap_token": "test-only-bootstrap-token-with-32-chars",
+    }
+
+    denied = client.post("/api/v1/admin/bootstrap", json=payload)
+    assert denied.status_code == 409
+    assert "Confirm" in denied.json()["detail"]
+    assert count_admin_users(db) == 0
+    assert db.get(User, existing.id).hashed_password == original_hash
+
+    payload["confirm_existing_owner"] = True
+    created = client.post("/api/v1/admin/bootstrap", json=payload)
+    assert created.status_code == 201
+    db.expire_all()
+    owner = db.get(User, existing.id)
+    assert owner.role == "admin"
+    assert owner.is_active is True
+    assert owner.hashed_password != original_hash
+    assert verify_password("NewOwnerPassword123", owner.hashed_password)
+
+
+def test_web_first_admin_bootstrap_serializes_concurrent_attempts(
+    client, db, monkeypatch, tmp_path
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    _configure_admin_owner(monkeypatch, "concurrent-owner@example.com")
+    previous_override = app.dependency_overrides.get(get_db)
+    request_barrier = Barrier(2)
+    concurrent_engine = create_engine(
+        f"sqlite:///{tmp_path / 'admin-bootstrap-race.db'}",
+        connect_args={"check_same_thread": False},
+    )
+    Base.metadata.create_all(bind=concurrent_engine)
+    concurrent_sessions = sessionmaker(
+        bind=concurrent_engine,
+        autoflush=False,
+        autocommit=False,
+    )
+
+    def isolated_db():
+        session = concurrent_sessions()
+        try:
+            yield session
+        finally:
+            session.close()
+
+    original_lock = admin_bootstrap_service._lock_first_admin_bootstrap
+
+    def synchronized_lock(session):
+        request_barrier.wait(timeout=5)
+        original_lock(session)
+
+    monkeypatch.setattr(
+        admin_bootstrap_service,
+        "_lock_first_admin_bootstrap",
+        synchronized_lock,
+    )
+    app.dependency_overrides[get_db] = isolated_db
+    payload = {
+        "full_name": "Concurrent Owner",
+        "email": "concurrent-owner@example.com",
+        "password": "Concurrent123",
+        "bootstrap_token": "test-only-bootstrap-token-with-32-chars",
+    }
+    try:
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            responses = list(executor.map(
+                lambda _index: TestClient(app).post(
+                    "/api/v1/admin/bootstrap",
+                    json=payload,
+                ),
+                range(2),
+            ))
+    finally:
+        if previous_override is None:
+            app.dependency_overrides.pop(get_db, None)
+        else:
+            app.dependency_overrides[get_db] = previous_override
+
+    assert sorted(response.status_code for response in responses) == [201, 409]
+    with concurrent_sessions() as concurrent_db:
+        assert count_admin_users(concurrent_db) == 1
+    concurrent_engine.dispose()
+
+
 def test_admins_can_create_standard_users_and_owner_can_create_second_admin(
     client, db, monkeypatch
 ):

@@ -1,8 +1,23 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, EmailStr, StrictBool
+from pydantic import BaseModel, ConfigDict, EmailStr, Field, StrictBool
 
-from backend.schemas.user import UserCreate
+from backend.schemas.user import AdminCreate, UserCreate
+
+
+class AdminBootstrapCreate(AdminCreate):
+	"""First-owner details plus the backend-configured bootstrap secret."""
+
+	bootstrap_token: str = Field(min_length=1, max_length=4096)
+	confirm_existing_owner: bool = False
+
+
+class AdminBootstrapStatus(BaseModel):
+	model_config = ConfigDict(extra="forbid")
+
+	setup_available: bool
+	administrator_exists: bool
+	setup_configured: bool
 
 
 class AdminManagedUserCreate(UserCreate):

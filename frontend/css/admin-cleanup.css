@@ -28,6 +28,16 @@
 }
 
 .admin-operation-section { margin-top: 1.25rem; }
+.admin-bootstrap-panel { display: grid; min-height: 100vh; align-content: start; gap: 1.5rem; padding: 2rem max(1rem, calc((100vw - 50rem) / 2)); background: var(--background); }
+.admin-bootstrap-home { color: var(--primary-dark); font-weight: 700; text-decoration: none; }
+.admin-bootstrap-card { width: 100%; max-width: 42rem; margin-inline: auto; border: 1px solid var(--border); background: var(--surface); padding: clamp(1.25rem, 4vw, 2.5rem); box-shadow: var(--shadow-sm); }
+.admin-bootstrap-card h1 { margin-bottom: .65rem; }
+.admin-bootstrap-card > p:not(.eyebrow) { color: var(--text-secondary); }
+.admin-bootstrap-card .admin-create-user-fields { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.admin-bootstrap-confirm { display: flex; align-items: flex-start; gap: .65rem; margin-block: 1rem; color: var(--text-secondary); font-size: var(--text-sm); }
+.admin-bootstrap-confirm input { margin-top: .25rem; }
+.admin-bootstrap-unavailable { margin-block: 1rem; border: 1px solid var(--danger); background: var(--danger-bg); padding: .85rem 1rem; color: var(--danger); }
+@media (max-width: 38rem) { .admin-bootstrap-card .admin-create-user-fields { grid-template-columns: 1fr; } }
 .admin-create-user { margin-bottom: 1.25rem; border: 1px solid var(--border); background: var(--surface-subtle); padding: 1rem; }
 .admin-create-user h3 { margin: 0 0 .75rem; color: var(--secondary); font-size: 1rem; }
 .admin-create-user-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .75rem; }
