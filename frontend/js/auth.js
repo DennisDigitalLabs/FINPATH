@@ -37,11 +37,13 @@
 		var accountLabel = document.getElementById('auth-account-label');
 		var requestedDestination = new URLSearchParams(window.location.search).get('next');
 		var currentPath = window.location.pathname || '';
-		var isAdminLogin = currentPath.replace(/\/$/, '') === '/admin/login'
-			|| requestedDestination === '/admin' || requestedDestination === '/admin.html';
+		var isAdminLogin = currentPath.replace(/\/$/, '') === '/admin/login';
 		if (isAdminLogin) {
 			document.getElementById('login-title').textContent = 'Administrator Login';
 			document.getElementById('auth-heading-description').textContent = 'Sign in to continue to the FINPATH Admin Panel.';
+		} else {
+			document.getElementById('login-title').textContent = 'Welcome Back';
+			document.getElementById('auth-heading-description').textContent = 'Sign in to continue to your FINPATH account.';
 		}
 		var loginTab = document.getElementById('login-tab');
 		if (loginTab) loginTab.href = isAdminLogin ? '/admin/login?next=%2Fadmin' : '/login';
@@ -113,7 +115,8 @@
 					else if (requestedDestination && requestedDestination.indexOf('/recommendations') === 0) {
 						destination = fallback;
 					}
-					if (destination === '/admin' && !isAdmin) destination = fallback;
+					if (isAdmin) destination = '/admin';
+					else if (destination === '/admin') destination = fallback;
 					window.location.href = destination;
 				})
 				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });

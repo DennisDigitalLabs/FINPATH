@@ -4,7 +4,7 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width, initial-scale=1">
 	<meta name="description" content="Sign in to your financial inclusion decision-support account.">
-	<title>FINPATH Admin Panel | Login</title>
+	<title>FINPATH Admin Panel | Administrator Login</title>
 	<link rel="stylesheet" href="/css/style.css">
 	<link rel="stylesheet" href="/css/responsive.css">
 	<link rel="stylesheet" href="/css/auth.css">
@@ -13,23 +13,23 @@
 	<main class="auth-shell">
 		<section class="auth-brand-panel" aria-labelledby="login-brand-title">
 			<a class="auth-brand" href="/" aria-label="Home"><span class="auth-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Financial insights</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
-			<div class="auth-brand-copy"><p class="eyebrow eyebrow-light">Your path starts here</p><h1 id="login-brand-title">Welcome back.<br><span>Your financial future</span><br>starts here.</h1><p>Sign in to continue your journey toward understanding financial inclusion risk and receiving personalized decision-support insights.</p></div>
+			<div class="auth-brand-copy"><p class="eyebrow eyebrow-light">FINPATH administration</p><h1 id="login-brand-title">Manage FINPATH.<br><span>Protect the journey.</span></h1><p>Administrator access is limited to authorized accounts for managing users and monitoring system operations.</p></div>
 			<div class="auth-visual"><img class="auth-visual-image" src="https://images.pexels.com/photos/36752223/pexels-photo-36752223/free-photo-of-young-woman-enjoying-mobile-phone-outdoors-in-accra.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Young woman using a smartphone outdoors in Accra, Ghana" width="900" height="600" loading="lazy" decoding="async"><div class="auth-chart"><div class="chart-label">Financial insight</div><div class="chart-bars"><i></i><i></i><i></i><i></i><i></i><i></i></div><div class="chart-line"></div></div><div class="auth-orbit"></div><div class="auth-shield">✓</div></div>
-			<div class="auth-trust"><span class="trust-icon" aria-hidden="true">✓</span><span><strong>Clarity with care</strong><small>Designed to help you understand the factors behind your journey.</small></span></div>
+			<div class="auth-trust"><span class="trust-icon" aria-hidden="true">✓</span><span><strong>Protected administration</strong><small>Administrative tools are available only to authorized administrator accounts.</small></span></div>
 		</section>
 		<section class="auth-form-panel" aria-labelledby="login-title">
 			<div class="auth-card">
-				<nav class="auth-tabs" aria-label="Account access"><table width="100%"><tbody><tr><td width="50%" align="center"><a class="auth-tab is-active" id="login-tab" href="/admin/login" aria-current="page">Login</a></td><td width="50%" align="center"><a class="auth-tab" href="/register">Register</a></td></tr></tbody></table></nav>
-				<div class="auth-card-heading"><h2 id="login-title">Administrator Login</h2><p id="auth-heading-description">Sign in to continue to the FINPATH Admin Panel.</p></div>
+				<div class="auth-card-heading"><p class="eyebrow">Protected administrator access</p><h2 id="login-title">Administrator Login</h2><p id="auth-heading-description">Sign in to continue to the FINPATH Admin Panel.</p></div>
 				<div class="auth-message auth-message-success" id="login-success" role="status" hidden></div>
 				<div class="auth-message auth-message-error" id="login-error" role="alert" hidden></div>
 				<form id="auth-form" class="auth-form" action="#" method="post" novalidate>
 					<div class="form-group"><label class="form-label" for="login-email">Email Address</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">@</span><input class="form-control" id="login-email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required aria-invalid="false" aria-describedby="login-email-error"><span class="field-status" aria-hidden="true"></span></div><span class="form-error" id="login-email-error" hidden>Enter a valid email address.</span></div>
 					<div class="form-group"><label class="form-label" for="login-password">Password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control password-input" id="login-password" name="password" type="password" autocomplete="current-password" placeholder="Enter your password" required aria-invalid="false" aria-describedby="login-password-error"><button class="password-toggle" type="button" data-password-toggle="login-password" aria-label="Show password" aria-pressed="false">Show</button></div><span class="form-error" id="login-password-error" hidden>Enter your password.</span></div>
-					<div class="auth-options"><label class="form-check"><input type="checkbox" name="remember" autocomplete="off"><span>Remember me</span></label><div class="auth-account-links"><a href="#forgot-password" class="auth-small-link" id="forgot-password-link">Forgot password?</a><a href="/register" class="auth-small-link">Create an account</a></div></div>
+					<div class="auth-options"><label class="form-check"><input type="checkbox" name="remember" autocomplete="off"><span>Remember me</span></label><div class="auth-account-links"><a href="#forgot-password" class="auth-small-link" id="forgot-password-link">Forgot password?</a></div></div>
 					<button class="btn btn-primary btn-lg btn-block" type="submit">Login <span aria-hidden="true">→</span></button>
 					<p class="auth-form-status" id="login-status" role="status" aria-live="polite"></p>
 				</form>
+				<p class="auth-switch">Administrator accounts are created through protected setup or by an existing administrator. Public registration is not available here.</p>
 				<section id="forgot-password-view" aria-labelledby="forgot-password-title" hidden>
 					<h3 class="sr-only" id="forgot-password-title">Forgot password</h3>
 					<form id="forgot-password-form" class="auth-form" action="#" method="post" novalidate>

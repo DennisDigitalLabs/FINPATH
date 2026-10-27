@@ -30,6 +30,10 @@ const adminLoginHtml = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'admin', 'login', 'index.html'),
 	'utf8'
 );
+const userLoginHtml = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'login', 'index.html'),
+	'utf8'
+);
 
 function createElement(values = {}) {
 	return {
@@ -44,7 +48,7 @@ function createElement(values = {}) {
 	};
 }
 
-async function submitLogin(role) {
+async function submitLogin(role, pathname = '/admin/login', search = '?next=%2Fadmin') {
 	const elements = new Map();
 	const loginForm = createElement();
 	const email = createElement({ value: 'owner@example.com' });
@@ -70,7 +74,7 @@ async function submitLogin(role) {
 		['login-status', status]
 	].forEach(([id, element]) => elements.set(id, element));
 	const window = {
-		location: { pathname: '/admin/login', search: '?next=%2Fadmin', href: '' },
+		location: { pathname, search, href: '' },
 		FinpathAPI: {
 			login: () => Promise.resolve({}),
 			me: () => Promise.resolve({ role })
@@ -84,7 +88,12 @@ async function submitLogin(role) {
 	vm.runInNewContext(authScript, { document, window, URLSearchParams, FormData: FormDataStub });
 	loginForm.onsubmit({ preventDefault() {} });
 	await new Promise((resolve) => setImmediate(resolve));
-	return window.location.href;
+	return {
+		destination: window.location.href,
+		heading: elements.get('login-title').textContent,
+		description: elements.get('auth-heading-description').textContent,
+		loginLink: elements.get('login-tab').href
+	};
 }
 
 async function submitForgotPassword(requestPasswordReset) {
@@ -175,7 +184,9 @@ test('successful registration return displays a clear sign-in message', () => {
 		['login-password-error', createElement()],
 		['login-error', createElement()],
 		['login-success', createElement({ hidden: true })],
-		['login-status', createElement()]
+		['login-status', createElement()],
+		['login-title', createElement({ textContent: '' })],
+		['auth-heading-description', createElement({ textContent: '' })]
 	]);
 	const document = {
 		getElementById(id) { return elements.get(id); }
@@ -189,14 +200,37 @@ test('successful registration return displays a clear sign-in message', () => {
 });
 
 test('login preserves admin destination for administrators and denies it to normal users', async () => {
-	assert.equal(await submitLogin('admin'), '/admin');
-	assert.equal(await submitLogin('user'), '/dashboard.html');
+	assert.equal((await submitLogin('admin')).destination, '/admin');
+	assert.equal((await submitLogin('user')).destination, '/dashboard.html');
 });
 
-test('admin login page orders tabs, credentials, recovery links, and sign-in like the reference', () => {
-	assert.match(adminLoginHtml, /<nav class="auth-tabs"[\s\S]*<td width="50%" align="center"><a[^>]*>Login<\/a><\/td><td width="50%" align="center"><a[^>]*>Register<\/a><\/td>[\s\S]*<\/nav>/);
-	assert.match(adminLoginHtml, /name="email"[\s\S]*name="password"[\s\S]*Remember me[\s\S]*Forgot password\?[\s\S]*Create an account[\s\S]*>Login <span/);
-	assert.match(adminLoginHtml, /href="\/admin\/login"/);
+test('public login uses standard-user wording while admin accounts still reach admin dashboard', async () => {
+	const admin = await submitLogin('admin', '/login', '?next=%2Fdashboard');
+	const user = await submitLogin('user', '/login', '?next=%2Fdashboard');
+
+	assert.equal(admin.destination, '/admin');
+	assert.equal(admin.heading, 'Welcome Back');
+	assert.equal(admin.description, 'Sign in to continue to your FINPATH account.');
+	assert.equal(admin.loginLink, '/login');
+	assert.equal(user.destination, '/dashboard.html');
+	assert.equal(user.heading, 'Welcome Back');
+});
+
+test('public login page uses the shared auth flow and exposes only user registration', () => {
+	assert.match(userLoginHtml, /<title>FINPATH \| Sign In<\/title>/);
+	assert.match(userLoginHtml, /id="auth-form"[\s\S]*name="email"[\s\S]*name="password"[\s\S]*href="#forgot-password"[\s\S]*>Login <span/);
+	assert.match(userLoginHtml, /href="\/register">Register<\/a>/);
+	assert.match(userLoginHtml, /src="\/js\/auth\.js"/);
+	assert.doesNotMatch(userLoginHtml, /window\.location\.replace/);
+});
+
+test('admin login has no public registration and explains protected provisioning', () => {
+	assert.match(adminLoginHtml, /<title>FINPATH Admin Panel \| Administrator Login<\/title>/);
+	assert.match(adminLoginHtml, /FINPATH administration[\s\S]*Manage FINPATH\.[\s\S]*Protected administration/);
+	assert.match(adminLoginHtml, /id="login-title">Administrator Login/);
+	assert.match(adminLoginHtml, /name="email"[\s\S]*name="password"[\s\S]*Remember me[\s\S]*Forgot password\?[\s\S]*>Login <span/);
+	assert.match(adminLoginHtml, /<\/form>\s*<p class="auth-switch">Administrator accounts are created through protected setup or by an existing administrator/);
+	assert.doesNotMatch(adminLoginHtml, /href="\/register"|Create (?:a|an) account|Sign up/i);
 	assert.doesNotMatch(adminLoginHtml, /href="[^"]*\.html/);
 });
 
@@ -303,8 +337,9 @@ test('protected-resource 401 still reports an expired session and clears its tok
 
 test('landing and dashboard provide the requested navigation links', () => {
 	assert.match(landingHtml, /class="btn btn-outline nav-admin" href="\/admin\/login\?next=%2Fadmin">Admin<\/a>/);
-	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin\/login\?next=%2Fadmin">Admin<\/a>/);
+	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin\/login\?next=%2Fadmin">Admin<\/a>[\s\S]*href="\/login">Log In<\/a>[\s\S]*href="\/register">Get Started<\/a>/);
 	assert.match(landingHtml, /href="\/register">Get Started<\/a>/);
-	assert.match(adminLoginHtml, /href="\/register">Register<\/a>/);
+	assert.match(landingHtml, /class="btn btn-outline nav-login" href="\/login">Log In<\/a>/);
+	assert.doesNotMatch(adminLoginHtml, /href="\/register"/);
 	assert.match(dashboardHtml, /class="nav-link" href="\/">Home<\/a>/);
 });
