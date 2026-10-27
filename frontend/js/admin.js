@@ -56,7 +56,7 @@
 	function handleFailure(reason, element, fallback) {
 		if (reason && reason.status === 401) {
 			window.FinpathAPI.clearToken();
-			window.location.href = '/login?next=/admin';
+			window.location.href = '/admin/login?next=%2Fadmin';
 			return true;
 		}
 		if (reason && reason.status === 403) {
@@ -258,7 +258,7 @@
 		window.FinpathAPI.createFirstAdmin(admin).then(function () {
 			firstAdminForm.reset();
 			setMessage(firstAdminState, 'Administrator account created. Redirecting to sign in…', false);
-			window.location.href = '/login?next=%2Fadmin';
+			window.location.href = '/admin/login?next=%2Fadmin';
 		}).catch(function (reason) {
 			setMessage(
 				firstAdminState,
@@ -372,7 +372,7 @@
 		adminDashboard.hidden = false;
 		document.querySelector('.admin-header').hidden = false;
 		if (!window.FinpathAPI.getToken()) {
-			window.location.href = '/login?next=/admin';
+			window.location.href = '/admin/login?next=%2Fadmin';
 			return;
 		}
 		window.FinpathAPI.me().then(function (user) {

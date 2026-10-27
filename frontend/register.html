@@ -1,52 +1,5 @@
 <!doctype html>
 <html lang="en">
-<head>
-	<meta charset="utf-8">
-	<meta name="viewport" content="width=device-width, initial-scale=1">
-	<meta name="description" content="Create an account to begin your financial inclusion assessment journey.">
-	<title>FINPATH | Create Account</title>
-	<link rel="stylesheet" href="css/style.css">
-	<link rel="stylesheet" href="css/responsive.css">
-	<link rel="stylesheet" href="css/auth.css">
-</head>
-<body class="auth-page">
-	<main class="auth-shell">
-		<section class="auth-brand-panel" aria-labelledby="register-brand-title">
-			<a class="auth-brand" href="/" aria-label="Home"><span class="auth-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Financial insights</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
-			<div class="auth-brand-copy"><p class="eyebrow eyebrow-light">Begin with understanding</p><h1 id="register-brand-title">Make your next<br><span>financial decision</span><br>more informed.</h1><p>Create your account and take the first step toward clear, personalized financial inclusion insights.</p></div>
-			<div class="auth-visual auth-visual-register"><img class="auth-visual-image" src="https://images.pexels.com/photos/36752223/pexels-photo-36752223/free-photo-of-young-woman-enjoying-mobile-phone-outdoors-in-accra.jpeg?auto=compress&amp;cs=tinysrgb&amp;w=900" alt="Young woman using a smartphone outdoors in Accra, Ghana" width="900" height="600" loading="lazy" decoding="async"><div class="path-node node-a">Assess</div><div class="path-node node-b">Explain</div><div class="path-node node-c">Decide</div><div class="path-connector"></div><div class="auth-shield">✦</div></div>
-			<div class="auth-trust"><span class="trust-icon" aria-hidden="true">✓</span><span><strong>Your information, respected</strong><small>This service is designed around clarity, privacy, and informed choice.</small></span></div>
-		</section>
-		<section class="auth-form-panel" aria-labelledby="register-title">
-			<div class="auth-card auth-card-register">
-				<div class="auth-card-heading"><p class="eyebrow">Start your journey</p><h2 id="register-title">Create Your Account</h2><p>Start your financial inclusion assessment journey.</p></div>
-				<div class="auth-message auth-message-error" id="register-error" role="alert" hidden></div>
-				<form id="register-form" class="auth-form" action="#" method="post" novalidate>
-					<div class="form-group"><label class="form-label" for="register-name">Full name</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">◎</span><input class="form-control" id="register-name" name="full_name" type="text" autocomplete="name" placeholder="Enter your full name" required aria-describedby="register-name-error"></div><span class="form-error" id="register-name-error" hidden>Enter your full name.</span></div>
-					<div class="form-group"><label class="form-label" for="register-email">Email address</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">@</span><input class="form-control" id="register-email" name="email" type="email" autocomplete="email" placeholder="Enter your email address" required aria-describedby="register-email-error"></div><span class="form-error" id="register-email-error" hidden>Enter a valid email address.</span></div>
-					<div class="form-row"><div class="form-group"><label class="form-label" for="register-password">Password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control password-input" id="register-password" name="password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="register-password-help"><button class="password-toggle" type="button" data-password-toggle="register-password" aria-label="Show password" aria-pressed="false">Show</button></div><span class="form-help" id="register-password-help">At least 8 characters, including a letter and a number.</span></div><div class="form-group"><label class="form-label" for="register-confirm-password">Confirm password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control password-input" id="register-confirm-password" name="confirm_password" type="password" autocomplete="new-password" minlength="8" required aria-describedby="register-confirm-help"><button class="password-toggle" type="button" data-password-toggle="register-confirm-password" aria-label="Show password" aria-pressed="false">Show</button></div><span class="form-help" id="register-confirm-help">Re-enter your password.</span></div></div>
-					<button class="btn btn-primary btn-lg btn-block" type="submit">Create Account <span aria-hidden="true">→</span></button>
-					<p class="auth-form-status" id="register-status" role="status" aria-live="polite"></p>
-				</form>
-				<p class="auth-switch">Already have an account? <a href="/login">Sign In</a></p>
-				<p class="auth-footnote">Your account is created securely and ready to use after registration.</p>
-			</div>
-		</section>
-	</main>
-	<script src="js/config.js"></script>
-	<script src="js/api.js"></script>
-	<script src="js/auth.js"></script>
-	<script>
-		document.querySelectorAll('[data-password-toggle]').forEach(function (toggle) {
-			toggle.addEventListener('click', function () {
-				var field = document.getElementById(toggle.dataset.passwordToggle);
-				var isVisible = field.type === 'text';
-				field.type = isVisible ? 'password' : 'text';
-				toggle.textContent = isVisible ? 'Show' : 'Hide';
-				toggle.setAttribute('aria-label', isVisible ? 'Show password' : 'Hide password');
-				toggle.setAttribute('aria-pressed', String(!isVisible));
-			});
-		});
-	</script>
-</body>
+<head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=/register"><title>FINPATH | Create Account</title></head>
+<body><script>window.location.replace('/register' + window.location.search + window.location.hash);</script></body>
 </html>

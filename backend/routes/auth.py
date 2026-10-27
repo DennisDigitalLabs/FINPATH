@@ -66,16 +66,17 @@ def forgot_password(
 			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
 			detail="Password reset is temporarily unavailable.",
 		)
+	reset_url = None
 	if user is not None and user.is_active:
 		token = create_password_reset_token(user)
-		reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password.html#token={token}"
-		try:
-			send_password_reset_email(str(user.email), reset_url)
-		except (OSError, RuntimeError, smtplib.SMTPException):
-			raise HTTPException(
-				status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-				detail="Password reset is temporarily unavailable.",
-			)
+		reset_url = f"{settings.FRONTEND_URL.rstrip('/')}/reset-password#token={token}"
+	try:
+		send_password_reset_email(str(request.email), reset_url)
+	except (OSError, RuntimeError, smtplib.SMTPException) as exc:
+		raise HTTPException(
+			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+			detail="Password reset is temporarily unavailable.",
+		) from exc
 	return {"message": "If an account exists for that email, a password reset link will be sent shortly."}
 
 

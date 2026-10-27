@@ -124,7 +124,7 @@
 
 	function redirectToLogin() {
 		showMessage('Please sign in before starting an assessment. Redirecting you to login.', true);
-		window.setTimeout(function () { window.location.href = 'login.html?next=assessment.html'; }, 900);
+		window.setTimeout(function () { window.location.href = '/login?next=%2Fdashboard'; }, 900);
 	}
 
 	function formDataObject() {

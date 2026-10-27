@@ -1,0 +1,16 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>FINPATH | Sign In</title>
+</head>
+<body>
+	<p>Opening sign in…</p>
+	<script>
+		var query = new URLSearchParams(window.location.search);
+		if (!query.has('next')) query.set('next', '/dashboard');
+		window.location.replace('/admin/login?' + query.toString() + window.location.hash);
+	</script>
+</body>
+</html>

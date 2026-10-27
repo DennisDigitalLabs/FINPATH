@@ -58,17 +58,20 @@ services:
         source: /
         destination: /index.html
       - type: rewrite
+        source: /admin/login
+        destination: /admin/login/index.html
+      - type: rewrite
         source: /login
-        destination: /login.html
+        destination: /admin/login/index.html
       - type: rewrite
         source: /register
-        destination: /register.html
+        destination: /register/index.html
       - type: rewrite
         source: /forgot-password
-        destination: /forgot-password.html
+        destination: /admin/login/index.html
       - type: rewrite
         source: /reset-password
-        destination: /reset-password.html
+        destination: /reset-password/index.html
       - type: rewrite
         source: /dashboard
         destination: /dashboard.html
@@ -89,4 +92,4 @@ services:
         destination: /profile.html
       - type: rewrite
         source: /admin
-        destination: /admin.html
+        destination: /admin/index.html

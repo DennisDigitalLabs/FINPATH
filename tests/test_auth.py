@@ -203,7 +203,7 @@ def test_forgot_password_sends_reset_email_when_smtp_is_configured(monkeypatch):
 	assert response.status_code == 202
 	assert response.json() == {"message": "If an account exists for that email, a password reset link will be sent shortly."}
 	assert emails[0][0] == "amina@example.com"
-	assert emails[0][1].startswith(f"{get_settings().FRONTEND_URL}/reset-password.html#token=")
+	assert emails[0][1].startswith(f"{get_settings().FRONTEND_URL}/reset-password#token=")
 	assert "#token=" in emails[0][1]
 
 
@@ -220,7 +220,7 @@ def test_forgot_password_returns_explicit_unavailable_error_without_smtp(monkeyp
 def test_forgot_password_uses_same_response_for_existing_and_missing_email(monkeypatch):
 	emails = []
 	monkeypatch.setattr(auth_routes, "password_reset_email_configured", lambda: True)
-	monkeypatch.setattr(auth_routes, "send_password_reset_email", lambda recipient, url: emails.append(recipient))
+	monkeypatch.setattr(auth_routes, "send_password_reset_email", lambda recipient, url: emails.append((recipient, url)))
 	register_user()
 
 	existing = client.post("/api/v1/auth/forgot-password", json={"email": "amina@example.com"})
@@ -228,13 +228,15 @@ def test_forgot_password_uses_same_response_for_existing_and_missing_email(monke
 
 	assert existing.status_code == missing.status_code == 202
 	assert existing.json() == missing.json()
-	assert emails == ["amina@example.com"]
+	assert [email for email, _url in emails] == ["amina@example.com", "missing@example.com"]
+	assert emails[0][1].startswith(f"{get_settings().FRONTEND_URL}/reset-password#token=")
+	assert emails[1][1] is None
 
 
-def test_inactive_and_missing_users_do_not_receive_reset_email(monkeypatch):
+def test_inactive_and_missing_users_receive_generic_no_link_notice(monkeypatch):
 	emails = []
 	monkeypatch.setattr(auth_routes, "password_reset_email_configured", lambda: True)
-	monkeypatch.setattr(auth_routes, "send_password_reset_email", lambda recipient, url: emails.append(recipient))
+	monkeypatch.setattr(auth_routes, "send_password_reset_email", lambda recipient, url: emails.append((recipient, url)))
 	register_user()
 	db = TestSessionLocal()
 	db.query(User).filter(User.email == "amina@example.com").update({"is_active": False})
@@ -245,7 +247,28 @@ def test_inactive_and_missing_users_do_not_receive_reset_email(monkeypatch):
 	missing = client.post("/api/v1/auth/forgot-password", json={"email": "missing@example.com"})
 
 	assert inactive.status_code == missing.status_code == 202
-	assert emails == []
+	assert emails == [
+		("amina@example.com", None),
+		("missing@example.com", None),
+	]
+
+
+def test_password_reset_delivery_failure_is_account_enumeration_safe(monkeypatch):
+	monkeypatch.setattr(auth_routes, "password_reset_email_configured", lambda: True)
+
+	def fail_delivery(_recipient, _url):
+		raise RuntimeError("SMTP failure")
+
+	monkeypatch.setattr(auth_routes, "send_password_reset_email", fail_delivery)
+	register_user()
+
+	existing = client.post("/api/v1/auth/forgot-password", json={"email": "amina@example.com"})
+	missing = client.post("/api/v1/auth/forgot-password", json={"email": "missing@example.com"})
+
+	assert existing.status_code == missing.status_code == 503
+	assert existing.json() == missing.json() == {
+		"detail": "Password reset is temporarily unavailable."
+	}
 
 
 def test_valid_password_reset_token_is_accepted():

@@ -15,7 +15,7 @@ const apiScript = fs.readFileSync(
 	'utf8'
 );
 const adminHtml = fs.readFileSync(
-	path.join(__dirname, '..', 'frontend', 'admin.html'),
+	path.join(__dirname, '..', 'frontend', 'admin', 'index.html'),
 	'utf8'
 );
 
@@ -155,7 +155,29 @@ test('admin page shows the first-owner form and redirects after successful setup
 		confirm_existing_owner: false
 	}));
 	assert.equal(page.elements.get('first-admin-form').wasReset, true);
-	assert.equal(window.location.href, '/login?next=%2Fadmin');
+	assert.equal(window.location.href, '/admin/login?next=%2Fadmin');
+});
+
+test('an existing administrator is sent to admin login without showing bootstrap form', async () => {
+	const page = createAdminPage();
+	const window = {
+		location: { href: '' },
+		FinpathAPI: {
+			getToken: () => null,
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			})
+		}
+	};
+
+	vm.runInNewContext(adminScript, { window, document: page.document });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	assert.equal(page.elements.get('first-admin-setup').hidden, true);
+	assert.equal(page.elements.get('admin-dashboard').hidden, false);
+	assert.equal(window.location.href, '/admin/login?next=%2Fadmin');
 });
 
 test('authorized admin loads real overview, health, and paginated account data', async () => {

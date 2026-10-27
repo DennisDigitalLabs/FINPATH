@@ -38,7 +38,7 @@ If an account already exists for the configured owner email but is inactive or h
 
 For Render setup, configure `ADMIN_OWNER_EMAIL` to the intended owner email and set a securely generated, temporary `ADMIN_BOOTSTRAP_TOKEN` (at least 32 characters) in the API service environment. Deploy the backend and frontend updates, then visit the existing Admin button and submit the first-owner form using that email, a strong password, and the token. After successful creation, remove `ADMIN_BOOTSTRAP_TOKEN` from the Render environment and allow the service to restart. Sign in at the existing admin login page. For trusted operator recovery of an existing inactive or inconsistent owner account, use `python -m backend.create_admin` from an authenticated backend shell instead; the web bootstrap intentionally refuses to repair existing accounts.
 
-Password-reset email delivery requires `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM_EMAIL` to be configured. `FRONTEND_URL` must point to the deployed frontend so reset links return to the correct site. If SMTP is missing or delivery fails, the API returns `503` rather than reporting a false success.
+Password-reset email delivery requires `SMTP_HOST`, `SMTP_PORT`, `SMTP_USERNAME`, `SMTP_PASSWORD`, and `SMTP_FROM_EMAIL` to be configured. `FRONTEND_URL` must point to the deployed frontend so reset links return to the correct site. When configured, the service sends a reset link only for an active account and a generic no-link notice otherwise, so unknown/inactive addresses and active addresses receive the same API response. If SMTP is missing or delivery fails, the API returns `503` rather than reporting a false success.
 
 ### Assessments
 

@@ -23,18 +23,68 @@ const dashboardHtml = fs.readFileSync(
 	'utf8'
 );
 const registerHtml = fs.readFileSync(
-	path.join(__dirname, '..', 'frontend', 'register.html'),
+	path.join(__dirname, '..', 'frontend', 'register', 'index.html'),
+	'utf8'
+);
+const adminLoginHtml = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'admin', 'login', 'index.html'),
 	'utf8'
 );
 
 function createElement(values = {}) {
 	return {
 		addEventListener(name, callback) { this['on' + name] = callback; },
+		setAttribute() {},
+		closest() { return null; },
+		classList: { toggle() {} },
 		checkValidity() { return true; },
 		focus() {},
 		reportValidity() {},
 		...values
 	};
+}
+
+async function submitLogin(role) {
+	const elements = new Map();
+	const loginForm = createElement();
+	const email = createElement({ value: 'owner@example.com' });
+	const password = createElement({ value: 'OwnerPassword123' });
+	const loginError = createElement();
+	const status = createElement({ textContent: '' });
+	const loginSuccess = createElement({ hidden: true });
+	const document = {
+		getElementById(id) { return elements.get(id); }
+	};
+	[
+		['auth-form', loginForm],
+		['login-email', email],
+		['login-password', password],
+		['login-email-error', createElement()],
+		['login-password-error', createElement()],
+		['login-error', loginError],
+		['login-success', loginSuccess],
+		['auth-account-label', createElement({ textContent: '' })],
+		['login-title', createElement({ textContent: '' })],
+		['auth-heading-description', createElement({ textContent: '' })],
+		['login-tab', createElement({ href: '' })],
+		['login-status', status]
+	].forEach(([id, element]) => elements.set(id, element));
+	const window = {
+		location: { pathname: '/admin/login', search: '?next=%2Fadmin', href: '' },
+		FinpathAPI: {
+			login: () => Promise.resolve({}),
+			me: () => Promise.resolve({ role })
+		}
+	};
+	class FormDataStub {
+		get(name) {
+			return ({ email: email.value, password: password.value, remember: null })[name];
+		}
+	}
+	vm.runInNewContext(authScript, { document, window, URLSearchParams, FormData: FormDataStub });
+	loginForm.onsubmit({ preventDefault() {} });
+	await new Promise((resolve) => setImmediate(resolve));
+	return window.location.href;
 }
 
 async function submitForgotPassword(requestPasswordReset) {
@@ -116,6 +166,98 @@ test('registration does not require acknowledgement of unpublished policy pages'
 	assert.doesNotMatch(authScript, /a\[href="#terms"\]/);
 });
 
+test('successful registration return displays a clear sign-in message', () => {
+	const elements = new Map([
+		['auth-form', createElement()],
+		['login-email', createElement()],
+		['login-password', createElement()],
+		['login-email-error', createElement()],
+		['login-password-error', createElement()],
+		['login-error', createElement()],
+		['login-success', createElement({ hidden: true })],
+		['login-status', createElement()]
+	]);
+	const document = {
+		getElementById(id) { return elements.get(id); }
+	};
+	const window = { location: { search: '?registered=1' } };
+
+	vm.runInNewContext(authScript, { document, window, URLSearchParams });
+
+	assert.equal(elements.get('login-success').hidden, false);
+	assert.equal(elements.get('login-success').textContent, 'Your account was created. Sign in to continue.');
+});
+
+test('login preserves admin destination for administrators and denies it to normal users', async () => {
+	assert.equal(await submitLogin('admin'), '/admin');
+	assert.equal(await submitLogin('user'), '/dashboard.html');
+});
+
+test('admin login page orders tabs, credentials, recovery links, and sign-in like the reference', () => {
+	assert.match(adminLoginHtml, /<nav class="auth-tabs"[\s\S]*<td width="50%" align="center"><a[^>]*>Login<\/a><\/td><td width="50%" align="center"><a[^>]*>Register<\/a><\/td>[\s\S]*<\/nav>/);
+	assert.match(adminLoginHtml, /name="email"[\s\S]*name="password"[\s\S]*Remember me[\s\S]*Forgot password\?[\s\S]*Create an account[\s\S]*>Login <span/);
+	assert.match(adminLoginHtml, /href="\/admin\/login"/);
+	assert.doesNotMatch(adminLoginHtml, /href="[^"]*\.html/);
+});
+
+test('admin login identifies the FINPATH Admin Panel', async () => {
+	await submitLogin('admin');
+	const elements = new Map();
+	const loginHeading = createElement({ textContent: '' });
+	const description = createElement({ textContent: '' });
+	const form = createElement();
+	const email = createElement({ value: 'owner@example.com' });
+	const password = createElement({ value: 'OwnerPassword123' });
+	for (const [id, element] of [
+		['auth-form', form],
+		['login-email', email],
+		['login-password', password],
+		['login-email-error', createElement()],
+		['login-password-error', createElement()],
+		['login-error', createElement()],
+		['login-status', createElement({ textContent: '' })],
+		['login-title', loginHeading],
+		['auth-heading-description', description],
+		['login-tab', createElement()]
+	]) elements.set(id, element);
+	const document = { getElementById(id) { return elements.get(id); } };
+	const window = {
+		location: { pathname: '/admin/login', search: '?next=%2Fadmin', href: '' },
+		FinpathAPI: {
+			login: () => Promise.resolve({}),
+			me: () => Promise.resolve({ role: 'admin' })
+		}
+	};
+	class FormDataStub {
+		get(name) { return ({ email: email.value, password: password.value, remember: null })[name]; }
+	}
+
+	vm.runInNewContext(authScript, { document, window, URLSearchParams, FormData: FormDataStub });
+	form.onsubmit({ preventDefault() {} });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	assert.equal(loginHeading.textContent, 'Administrator Login');
+	assert.equal(description.textContent, 'Sign in to continue to the FINPATH Admin Panel.');
+	assert.equal(window.location.href, '/admin');
+});
+
+test('registration page follows the reference order and explains standard-user access', () => {
+	const orderedContent = [
+		registerHtml.indexOf('>Login</a>'),
+		registerHtml.indexOf('>Register</a>'),
+		registerHtml.indexOf('id="register-title">Create Account'),
+		registerHtml.indexOf('Public registration creates a standard FINPATH user account.'),
+		registerHtml.indexOf('for="register-name">Full Name'),
+		registerHtml.indexOf('for="register-email">Email Address'),
+		registerHtml.indexOf('for="register-password">Password'),
+		registerHtml.indexOf('for="register-confirm-password">Confirm password'),
+		registerHtml.indexOf('>Create Account <span')
+	];
+
+	assert.ok(orderedContent.every((position) => position >= 0));
+	assert.deepEqual(orderedContent, [...orderedContent].sort((left, right) => left - right));
+});
+
 function createApiHarness(responseStatus, responseBody) {
 	const values = new Map();
 	const storage = {
@@ -160,7 +302,9 @@ test('protected-resource 401 still reports an expired session and clears its tok
 });
 
 test('landing and dashboard provide the requested navigation links', () => {
-	assert.match(landingHtml, /class="btn btn-outline nav-admin" href="\/admin">Admin<\/a>/);
-	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin">Admin<\/a>/);
+	assert.match(landingHtml, /class="btn btn-outline nav-admin" href="\/admin\/login\?next=%2Fadmin">Admin<\/a>/);
+	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin\/login\?next=%2Fadmin">Admin<\/a>/);
+	assert.match(landingHtml, /href="\/register">Get Started<\/a>/);
+	assert.match(adminLoginHtml, /href="\/register">Register<\/a>/);
 	assert.match(dashboardHtml, /class="nav-link" href="\/">Home<\/a>/);
 });

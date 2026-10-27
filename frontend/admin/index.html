@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="FINPATH administrator workspace for live system operations.">
+	<title>FINPATH Admin Dashboard</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<link rel="stylesheet" href="/css/responsive.css">
+	<link rel="stylesheet" href="/css/admin.css">
+	<link rel="stylesheet" href="/css/workspace-nav.css">
+	<link rel="stylesheet" href="/css/admin-cleanup.css">
+</head>
+<body class="admin-page">
+	<header class="admin-header" hidden><nav class="site-nav" aria-label="Primary navigation"><div class="container admin-nav-inner">
+		<a class="brand" href="/" aria-label="Home"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Financial insights</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
+		<div class="top-nav-links"><a class="nav-link active" href="/admin" aria-current="page">FINPATH Admin Dashboard</a><a class="nav-link" href="/">Home</a><button class="nav-link nav-button" id="admin-logout" type="button">Log out</button></div>
+	</div></nav></header>
+	<main id="main-content">
+		<section class="admin-bootstrap-panel" id="first-admin-setup" aria-labelledby="first-admin-title" hidden>
+			<a class="admin-bootstrap-home" href="/">← Return to home</a>
+			<div class="admin-bootstrap-card">
+				<p class="eyebrow">Initial administrator setup</p>
+				<h1 id="first-admin-title">Create First Admin Account</h1>
+				<p>Set up the configured owner account. This one-time form requires the setup token provided by the system administrator.</p>
+				<div class="admin-bootstrap-unavailable" id="admin-bootstrap-unavailable" role="alert" hidden></div>
+				<form id="first-admin-form" class="admin-create-user" novalidate>
+					<div class="admin-create-user-fields">
+						<label>Full name<input name="full_name" type="text" maxlength="255" autocomplete="name" required></label>
+						<label>Configured owner email<input name="email" type="email" maxlength="255" autocomplete="email" required></label>
+						<label>Password<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+						<label>Setup token<input name="bootstrap_token" type="password" autocomplete="off" required></label>
+					</div>
+					<label class="admin-bootstrap-confirm"><input name="confirm_existing_owner" type="checkbox"> If an account already uses this configured owner email, I authorize replacing its password and establishing it as the first administrator.</label>
+					<p class="admin-create-user-help">The email must match the backend's configured ADMIN_OWNER_EMAIL. The token is validated by the backend and is never included in the page source.</p>
+					<button class="btn btn-primary" id="first-admin-submit" type="submit">Create first administrator</button>
+					<p class="admin-create-user-state" id="first-admin-state" role="status" aria-live="polite"></p>
+				</form>
+			</div>
+		</section>
+		<div class="container admin-layout" id="admin-dashboard" hidden>
+		<aside class="admin-sidebar" aria-label="Admin navigation"><div class="sidebar-label">Administration</div><nav class="side-nav"><a class="side-link active" href="#overview-section"><span aria-hidden="true">▦</span>Overview</a><a class="side-link" href="#health-section"><span aria-hidden="true">●</span>System health</a><a class="side-link" href="#users-section"><span aria-hidden="true">○</span>User management</a></nav><div class="sidebar-note"><strong>Protected administration</strong><small>Access is limited to active administrator accounts.</small></div></aside>
+		<section class="admin-content" aria-labelledby="admin-title">
+			<section class="admin-intro"><div><p class="eyebrow">Operations overview</p><h1 id="admin-title">FINPATH Admin Dashboard</h1><p>Monitor available system totals, service health, and user account status.</p></div><div><button class="btn btn-outline" id="refresh-admin" type="button">Refresh data</button></div></section>
+			<div class="admin-notice" id="admin-state" role="status" aria-live="polite">Loading administration data…</div>
+			<section class="admin-section" id="overview-section" aria-labelledby="overview-heading"><div class="section-heading"><div><p class="eyebrow">At a glance</p><h2 id="overview-heading">System overview</h2></div><span class="summary-note" id="generated-at">Loading live totals…</span></div><div class="stat-grid">
+				<article class="stat-card"><span>Total users</span><strong data-stat="user_count">—</strong><small>Registered accounts</small></article>
+				<article class="stat-card"><span>Active users</span><strong data-stat="active_user_count">—</strong><small>Active accounts</small></article>
+				<article class="stat-card"><span>Total assessments</span><strong data-stat="total_assessments">—</strong><small>Assessment records</small></article>
+				<article class="stat-card"><span>Completed assessments</span><strong data-stat="completed_assessments">—</strong><small>Completed records</small></article>
+				<article class="stat-card"><span>Predictions generated</span><strong data-stat="prediction_count">—</strong><small>Prediction records</small></article>
+				<article class="stat-card"><span>Recommendations generated</span><strong data-stat="recommendation_count">—</strong><small>Recommendation records</small></article>
+				<div class="admin-distributions"><section class="admin-panel" aria-labelledby="assessment-distribution-heading"><h3 id="assessment-distribution-heading">Assessment status</h3><div class="category-list" id="assessment-distribution"></div></section><section class="admin-panel" aria-labelledby="risk-distribution-heading"><h3 id="risk-distribution-heading">Prediction risk levels</h3><div class="category-list" id="risk-distribution"></div></section></div>
+			</section>
+			<section class="admin-section admin-operation-section" id="health-section" aria-labelledby="health-heading"><div class="section-heading"><div><p class="eyebrow">Service status</p><h2 id="health-heading">System health</h2></div></div><div id="health-state" class="admin-empty-copy" role="status" aria-live="polite">Checking backend and database…</div></section>
+			<section class="admin-section admin-operation-section" id="users-section" aria-labelledby="users-heading"><div class="section-heading"><div><p class="eyebrow">Accounts</p><h2 id="users-heading">User management</h2></div><span class="summary-note" id="users-summary">Loading accounts…</span></div>
+				<form id="create-user-form" class="admin-create-user">
+					<h3>Create a user account</h3>
+					<div class="admin-create-user-fields">
+						<label>Full name<input name="full_name" type="text" maxlength="255" autocomplete="name" required></label>
+						<label>Email<input name="email" type="email" maxlength="255" autocomplete="email" required></label>
+						<label>Password<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+					</div>
+					<p class="admin-create-user-help">Creates a standard user account. Passwords must contain at least one letter and one number.</p>
+					<button class="btn btn-primary" id="create-user-submit" type="submit">Create account</button>
+					<p class="admin-create-user-state" id="create-user-state" role="status" aria-live="polite"></p>
+				</form>
+				<form id="create-admin-form" class="admin-create-user">
+					<h3>Create an administrator account</h3>
+					<div class="admin-create-user-fields">
+						<label>Full name<input name="full_name" type="text" maxlength="255" autocomplete="name" required></label>
+						<label>Email<input name="email" type="email" maxlength="255" autocomplete="email" required></label>
+						<label>Password<input name="password" type="password" minlength="8" maxlength="128" autocomplete="new-password" required></label>
+					</div>
+					<p class="admin-create-user-help">Only two active administrator accounts are allowed. New administrators can access the protected dashboard.</p>
+					<button class="btn btn-primary" id="create-admin-submit" type="submit">Create administrator</button>
+					<p class="admin-create-user-state" id="create-admin-state" role="status" aria-live="polite"></p>
+				</form>
+				<form id="user-search-form" class="admin-search"><label for="user-search">Search name or email</label><input id="user-search" name="search" type="search" maxlength="100" autocomplete="off"><button class="btn btn-primary" type="submit">Search</button><button class="btn btn-outline" id="clear-user-search" type="button">Clear</button></form>
+				<div id="user-list-state" class="admin-empty-copy" role="status" aria-live="polite">Loading accounts…</div>
+				<div class="table-wrap"><table id="admin-users-table" hidden><thead><tr><th scope="col">Account</th><th scope="col">Role</th><th scope="col">Status</th><th scope="col">Created</th><th scope="col">Action</th></tr></thead><tbody id="admin-users-body"></tbody></table></div>
+				<div class="admin-pagination"><span id="user-page-summary">Page 1</span><div><button class="btn btn-outline" id="users-previous" type="button" disabled>Previous</button><button class="btn btn-outline" id="users-next" type="button" disabled>Next</button></div></div>
+			</section>
+		</section>
+	</div></main>
+	<script src="/js/config.js"></script><script src="/js/api.js"></script><script src="/js/admin.js"></script>
+</body>
+</html>

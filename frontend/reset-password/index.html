@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<meta name="description" content="Set a new FINPATH account password.">
+	<title>Reset Password | FINPATH</title>
+	<link rel="stylesheet" href="/css/style.css">
+	<link rel="stylesheet" href="/css/responsive.css">
+	<link rel="stylesheet" href="/css/auth.css">
+</head>
+<body class="auth-page">
+	<main class="auth-shell">
+		<section class="auth-brand-panel" aria-labelledby="reset-brand-title">
+			<a class="auth-brand" href="/" aria-label="Home"><span class="auth-brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Financial insights</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
+			<div class="auth-brand-copy"><p class="eyebrow eyebrow-light">Secure account access</p><h1 id="reset-brand-title">Choose a new<br><span>password with</span><br>confidence.</h1><p>Your reset link is time-limited and can only be used once.</p></div>
+			<div class="auth-trust"><span class="trust-icon" aria-hidden="true">✓</span><span><strong>Your information, respected</strong><small>Reset links expire and can be used only once.</small></span></div>
+		</section>
+		<section class="auth-form-panel" aria-labelledby="reset-title">
+			<div class="auth-card">
+				<div class="auth-card-heading"><p class="eyebrow">Account recovery</p><h2 id="reset-title">Reset your password</h2><p id="reset-description">Choose a new password for your FINPATH account.</p></div>
+				<p class="auth-form-status" id="reset-link-status" role="status" aria-live="polite">Checking your reset link...</p>
+				<div class="auth-message auth-message-error" id="reset-link-error" role="alert" hidden></div>
+				<form id="reset-password-form" class="auth-form" action="#" method="post" novalidate hidden>
+					<div class="auth-message auth-message-error" id="reset-password-error" role="alert" hidden></div>
+					<div class="form-group"><label class="form-label" for="new-password">New password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control" id="new-password" name="password" type="password" autocomplete="new-password" required minlength="8" maxlength="128" aria-describedby="new-password-help"></div><span class="form-help" id="new-password-help">Use 8–128 characters, including a letter and a number. Do not add spaces at the beginning or end.</span></div>
+					<div class="form-group"><label class="form-label" for="confirm-new-password">Confirm new password</label><div class="input-wrap"><span class="input-icon" aria-hidden="true">•</span><input class="form-control" id="confirm-new-password" name="confirm_password" type="password" autocomplete="new-password" required minlength="8" maxlength="128"></div></div>
+					<button class="btn btn-primary btn-lg btn-block" id="reset-password-submit" type="submit">Update Password</button>
+					<p class="auth-form-status" id="reset-password-status" role="status" aria-live="polite"></p>
+				</form>
+				<section id="reset-password-success" aria-live="polite" hidden><p class="text-success">Your password has been changed successfully.</p><a class="btn btn-primary btn-lg btn-block" href="/login">Return to sign in</a></section>
+				<p class="auth-switch"><a href="/login#forgot-password">Request another reset link</a></p>
+			</div>
+		</section>
+	</main>
+	<script src="/js/config.js"></script><script src="/js/api.js"></script><script src="/js/reset-password.js"></script>
+</body>
+</html>

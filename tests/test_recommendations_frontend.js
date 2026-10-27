@@ -220,7 +220,7 @@ test('unauthenticated recommendations redirect preserves the selected prediction
 	assert.equal(returnedUrl.searchParams.get('prediction_id'), '00042');
 
 	const destination = await executeLogin(next);
-	assert.equal(destination, '/recommendations?prediction_id=00042');
+	assert.equal(destination, '/recommendations.html?prediction_id=00042');
 });
 
 test('unsafe and invalid recommendation return destinations use the safe fallback', async () => {
@@ -233,7 +233,7 @@ test('unsafe and invalid recommendation return destinations use the safe fallbac
 		'/recommendations?prediction_id=42&next=https://attacker.example',
 		'/recommendations/../admin?prediction_id=42'
 	]) {
-		assert.equal(await executeLogin(next), '/dashboard', next);
+		assert.equal(await executeLogin(next), '/dashboard.html', next);
 	}
 });
 

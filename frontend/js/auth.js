@@ -32,7 +32,23 @@
 		var emailError = document.getElementById('login-email-error');
 		var passwordError = document.getElementById('login-password-error');
 		var loginError = document.getElementById('login-error');
+		var loginSuccess = document.getElementById('login-success');
 		var status = document.getElementById('login-status');
+		var accountLabel = document.getElementById('auth-account-label');
+		var requestedDestination = new URLSearchParams(window.location.search).get('next');
+		var currentPath = window.location.pathname || '';
+		var isAdminLogin = currentPath.replace(/\/$/, '') === '/admin/login'
+			|| requestedDestination === '/admin' || requestedDestination === '/admin.html';
+		if (isAdminLogin) {
+			document.getElementById('login-title').textContent = 'Administrator Login';
+			document.getElementById('auth-heading-description').textContent = 'Sign in to continue to the FINPATH Admin Panel.';
+		}
+		var loginTab = document.getElementById('login-tab');
+		if (loginTab) loginTab.href = isAdminLogin ? '/admin/login?next=%2Fadmin' : '/login';
+		if (loginSuccess && new URLSearchParams(window.location.search).get('registered') === '1') {
+			loginSuccess.textContent = 'Your account was created. Sign in to continue.';
+			loginSuccess.hidden = false;
+		}
 
 		function validateEmailField(forceDisplay) {
 			var value = (emailField.value || '').trim();
@@ -75,17 +91,24 @@
 			clearError(loginError);
 			status.textContent = 'Signing you in...';
 			var data = new FormData(loginForm);
-			var allowedDestinations = ['/admin', '/dashboard', '/analytics', '/recommendations'];
-			var requestedDestination = new URLSearchParams(window.location.search).get('next');
+			var destinationFiles = {
+				'/admin': '/admin',
+				'/admin.html': '/admin',
+				'/dashboard': '/dashboard.html',
+				'/analytics': '/analytics.html',
+				'/recommendations': '/recommendations.html'
+			};
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
 				.then(function () { return window.FinpathAPI.me(); })
 				.then(function (user) {
 					var isAdmin = user && user.role === 'admin';
-					var fallback = isAdmin ? '/admin' : '/dashboard';
-					var destination = allowedDestinations.indexOf(requestedDestination) !== -1 ? requestedDestination : fallback;
-					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations\?prediction_id=(\d+)$/);
+					var fallback = isAdmin ? '/admin' : '/dashboard.html';
+					var destination = Object.prototype.hasOwnProperty.call(destinationFiles, requestedDestination)
+						? destinationFiles[requestedDestination]
+						: fallback;
+					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations(?:\.html)?\?prediction_id=(\d+)$/);
 					if (recommendationDestination && Number.isSafeInteger(Number(recommendationDestination[1])) && Number(recommendationDestination[1]) > 0) {
-						destination = '/recommendations?prediction_id=' + recommendationDestination[1];
+						destination = '/recommendations.html?prediction_id=' + recommendationDestination[1];
 					}
 					else if (requestedDestination && requestedDestination.indexOf('/recommendations') === 0) {
 						destination = fallback;
@@ -106,7 +129,7 @@
 		var forgotPasswordSubmit = document.getElementById('forgot-password-submit');
 		var loginHeading = document.getElementById('login-title');
 		var loginDescription = document.getElementById('auth-heading-description');
-		var loginSwitch = document.querySelector('#auth-form + .auth-switch');
+		var loginSwitch = document.querySelector('.auth-tabs') || document.querySelector('#auth-form + .auth-switch');
 
 		function showForgotPassword() {
 			loginForm.hidden = true;
@@ -123,10 +146,13 @@
 			forgotPasswordView.hidden = true;
 			loginForm.hidden = false;
 			loginSwitch.hidden = false;
-			loginHeading.textContent = 'Welcome Back';
-			loginDescription.textContent = 'Sign in to continue to your FINPATH account.';
+			loginHeading.textContent = isAdminLogin ? 'Administrator Login' : 'Welcome Back';
+			loginDescription.textContent = isAdminLogin
+				? 'Sign in to continue to the FINPATH Admin Panel.'
+				: 'Sign in to continue to your FINPATH account.';
 			forgotPasswordStatus.textContent = '';
-			window.history.replaceState(null, '', window.location.pathname + window.location.search);
+			var loginPath = window.location.pathname === '/forgot-password' ? '/login' : window.location.pathname;
+			window.history.replaceState(null, '', loginPath + window.location.search);
 		}
 
 		forgotPasswordLink.addEventListener('click', function (event) {
@@ -160,7 +186,7 @@
 				});
 		});
 
-		if (window.location.hash === '#forgot-password') showForgotPassword();
+		if (window.location.hash === '#forgot-password' || window.location.pathname === '/forgot-password') showForgotPassword();
 	}
 
 	var registerForm = document.getElementById('register-form');
