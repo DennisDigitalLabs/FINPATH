@@ -8,7 +8,14 @@ from sqlalchemy import engine_from_config, pool
 
 from backend.config import get_settings
 from backend.database import Base
-from backend.models import Assessment, Prediction, Recommendation, User  # noqa: F401
+from backend.models import (  # noqa: F401
+    AdminAuditLog,
+    Assessment,
+    OperationalEvent,
+    Prediction,
+    Recommendation,
+    User,
+)
 
 config = context.config
 

@@ -6,7 +6,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.config import get_settings
-from backend.models import User
+from backend.models import AdminAuditLog, User
 from backend.schemas.user import AdminCreate
 from backend.security import hash_password
 from backend.services.auth_service import (
@@ -131,6 +131,12 @@ def provision_configured_owner(
 	existing_owner.role = "admin"
 	existing_owner.is_active = True
 	try:
+		db.add(AdminAuditLog(
+			actor_user_id=None,
+			action="admin.bootstrap_completed",
+			target_type="user",
+			target_id=str(existing_owner.id),
+		))
 		db.commit()
 	except SQLAlchemyError:
 		db.rollback()

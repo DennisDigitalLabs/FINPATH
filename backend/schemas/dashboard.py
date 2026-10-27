@@ -35,3 +35,5 @@ class SystemAnalyticsResponse(AnalyticsResponse):
     user_count: int
     active_user_count: int
     generated_at: datetime
+    assessment_completion_rate: float | None
+    risk_category_distribution: dict[str, int]

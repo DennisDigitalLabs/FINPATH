@@ -296,6 +296,7 @@ def test_admin_system_analytics_and_user_forbidden(monkeypatch):
     db.query(User).filter(User.email == "admin-analytics@example.com").update({"role": "admin"})
     db.commit()
     db.close()
+    seed_prediction_and_recommendation(create_assessment(admin_token))
 
     assert client.get(
         "/api/v1/analytics/system",
@@ -309,6 +310,8 @@ def test_admin_system_analytics_and_user_forbidden(monkeypatch):
     assert response.json()["user_count"] == 2
     assert "email" not in response.json()
     assert "assessment_data" not in response.json()
+    assert response.json()["assessment_completion_rate"] == 1.0
+    assert response.json()["risk_category_distribution"] == {"financial_access": 1}
 
 
 def test_empty_analytics_are_zero_and_authentication_is_required():

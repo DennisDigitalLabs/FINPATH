@@ -236,8 +236,12 @@
 	}
 
 	// Event listeners
-	nextButton.addEventListener('click', function () { if (validateCurrentStep()) showStep(currentStep + 1); });
-	previousButton.addEventListener('click', function () { showStep(currentStep - 1); });
+	nextButton.addEventListener('click', function () {
+		if (currentStep < totalQuestions && validateCurrentStep()) showStep(currentStep + 1);
+	});
+	previousButton.addEventListener('click', function () {
+		if (currentStep > 0) showStep(currentStep - 1);
+	});
 	form.addEventListener('submit', function (event) {
 		event.preventDefault();
 		if (!validateCurrentStep()) return;

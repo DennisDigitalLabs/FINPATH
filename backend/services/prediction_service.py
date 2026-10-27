@@ -208,6 +208,15 @@ class PredictionService:
 			self.input_adapter = MLInputMapperAdapter()
 		self.output_adapter = output_adapter or PredictionOutputAdapter()
 
+	@property
+	def model_available(self) -> bool:
+		return not isinstance(self.predictor, UnavailableMLPredictor)
+
+	@property
+	def model_version(self) -> str | None:
+		version = getattr(self.predictor, "model_version", None)
+		return version if isinstance(version, str) and version else None
+
 	@staticmethod
 	def _persist_recommendations(db: Session, prediction: Prediction, model_output: Any) -> None:
 		if not isinstance(model_output, Mapping):

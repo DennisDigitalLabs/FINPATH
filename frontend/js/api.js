@@ -119,16 +119,50 @@
 		getAnalytics: function () { return get('/api/v1/analytics'); },
 		getSystemAnalytics: function () { return get('/api/v1/analytics/system'); },
 		getAdminHealth: function () { return get('/api/v1/admin/health'); },
+		getAdminModelMonitoring: function () { return get('/api/v1/admin/model'); },
+		getAdminOperationalSummary: function () { return get('/api/v1/admin/operational-summary'); },
+		listAdminOperationalEvents: function (page, pageSize, statusFilter, severityFilter) {
+			var params = new URLSearchParams();
+			if (statusFilter) params.set('status_filter', statusFilter);
+			if (severityFilter) params.set('severity_filter', severityFilter);
+			params.set('page', String(page || 1));
+			params.set('page_size', String(pageSize || 10));
+			return get('/api/v1/admin/operational-events?' + params.toString());
+		},
+		acknowledgeAdminAlert: function (id) {
+			return post('/api/v1/admin/alerts/' + encodeURIComponent(id) + '/acknowledge', {});
+		},
+		listAdminAuditLogs: function (page, pageSize, filters) {
+			var params = new URLSearchParams();
+			filters = filters || {};
+			if (filters.action) params.set('action', filters.action);
+			if (filters.actorUserId) params.set('actor_user_id', filters.actorUserId);
+			if (filters.outcome) params.set('outcome', filters.outcome);
+			if (filters.createdAfter) params.set('created_after', filters.createdAfter);
+			if (filters.createdBefore) params.set('created_before', filters.createdBefore);
+			params.set('page', String(page || 1));
+			params.set('page_size', String(pageSize || 10));
+			return get('/api/v1/admin/audit-logs?' + params.toString());
+		},
 		getAdminBootstrapStatus: function () { return get('/api/v1/admin/bootstrap/status'); },
 		createFirstAdmin: function (admin) { return post('/api/v1/admin/bootstrap', admin); },
 		createAdminUser: function (user) { return post('/api/v1/admin/users', user); },
 		createAdminAccount: function (admin) { return post('/api/v1/admin/admins', admin); },
-		listAdminUsers: function (search, page, pageSize) {
+		listAdminUsers: function (search, page, pageSize, isActive) {
 			var params = new URLSearchParams();
 			if (search) params.set('search', search);
+			if (isActive !== null && isActive !== undefined) params.set('is_active', String(isActive));
 			params.set('page', String(page || 1));
 			params.set('page_size', String(pageSize || 10));
 			return get('/api/v1/admin/users?' + params.toString());
+		},
+		listAdminRecords: function (recordType, search, filterValue, page, pageSize) {
+			var params = new URLSearchParams();
+			if (search) params.set('search', search);
+			if (filterValue) params.set('filter_value', filterValue);
+			params.set('page', String(page || 1));
+			params.set('page_size', String(pageSize || 10));
+			return get('/api/v1/admin/records/' + encodeURIComponent(recordType) + '?' + params.toString());
 		},
 		setAdminUserActive: function (id, isActive) {
 			return request('/api/v1/admin/users/' + encodeURIComponent(id) + '/status', {
@@ -139,4 +173,12 @@
 	};
 
 	window.FinpathAPI = api;
+	if (typeof document !== 'undefined') {
+		Array.prototype.forEach.call(document.querySelectorAll('[data-logout]'), function (button) {
+			button.addEventListener('click', function () {
+				clearToken();
+				window.location.href = '/login';
+			});
+		});
+	}
 }(window));

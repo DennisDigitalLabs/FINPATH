@@ -52,9 +52,20 @@ def get_system_analytics(db: Session) -> SystemAnalyticsResponse:
 	analytics = _analytics_for_query(
 		db.query(Assessment), db.query(Prediction), db.query(Recommendation)
 	)
+	risk_category_rows = db.query(
+		Prediction.risk_category, func.count(Prediction.id)
+	).group_by(Prediction.risk_category).all()
+	completion_rate = (
+		analytics.completed_assessments / analytics.total_assessments
+		if analytics.total_assessments else None
+	)
 	return SystemAnalyticsResponse(
 		**analytics.model_dump(),
 		user_count=db.query(func.count(User.id)).scalar() or 0,
 		active_user_count=db.query(User).filter(User.is_active.is_(True)).count(),
 		generated_at=datetime.now(timezone.utc),
+		assessment_completion_rate=completion_rate,
+		risk_category_distribution={
+			category: count for category, count in risk_category_rows
+		},
 	)

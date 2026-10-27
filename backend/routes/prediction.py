@@ -1,9 +1,13 @@
+import logging
+
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import Session
 
 from backend.dependencies import get_current_user, get_db
 from backend.models import Prediction, User
 from backend.schemas.prediction import PredictionRequest, PredictionResponse
+from backend.services.admin_service import record_operational_event
 from backend.services.prediction_service import (
 	PredictionService,
 	PredictionUnavailableError,
@@ -15,6 +19,7 @@ from backend.services.assessment_service import get_user_assessment
 
 
 router = APIRouter(prefix="/api/v1", tags=["predictions"])
+logger = logging.getLogger(__name__)
 try:
 	prediction_service = PredictionService(RealFinpathPredictor())
 except PredictionUnavailableError:
@@ -42,11 +47,33 @@ def create_prediction(
 	try:
 		return prediction_service.generate_and_store(db, assessment, current_user)
 	except PredictionUnavailableError:
+		try:
+			record_operational_event(
+				db,
+				"prediction.unavailable",
+				"prediction",
+				"error",
+				"The prediction service could not process a request.",
+			)
+		except SQLAlchemyError:
+			db.rollback()
+			logger.error("Could not persist a prediction service failure event")
 		raise HTTPException(
 			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
 			detail="Prediction service is currently unavailable",
 		)
 	except ValueError as exc:
+		try:
+			record_operational_event(
+				db,
+				"prediction.generation_failed",
+				"prediction",
+				"error",
+				"Prediction generation failed validation.",
+			)
+		except SQLAlchemyError:
+			db.rollback()
+			logger.error("Could not persist a prediction validation failure event")
 		raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(exc))
 
 

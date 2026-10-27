@@ -23,7 +23,7 @@ from backend.services import admin_bootstrap_service, admin_service
 from backend.database import Base, SessionLocal, engine
 from backend.dependencies import get_db
 from backend.main import app
-from backend.models import User
+from backend.models import OperationalEvent, User
 from backend.services import auth_service
 from backend.schemas.user import AdminCreate, UserCreate
 from backend.security import decode_access_token, hash_password, verify_password
@@ -971,6 +971,7 @@ def test_admin_health_reports_database_failure_without_leaking_details(client, d
     assert response.json()["database"] == "available"
 
     original_execute = db.execute
+    existing_event_count = db.query(OperationalEvent).count()
 
     def fail_health_query(statement, *args, **kwargs):
         if str(statement) == "SELECT 1":
@@ -982,3 +983,10 @@ def test_admin_health_reports_database_failure_without_leaking_details(client, d
     assert failed.status_code == 503
     assert failed.json()["detail"] == "Database health check failed"
     assert "sensitive connection detail" not in failed.text
+    recorded_events = client.get(
+        "/api/v1/admin/operational-events",
+        headers=headers,
+    )
+    assert recorded_events.status_code == 200
+    assert recorded_events.json()["total"] == existing_event_count
+    assert db.query(OperationalEvent).count() == existing_event_count

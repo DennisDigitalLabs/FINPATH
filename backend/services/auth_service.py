@@ -8,7 +8,7 @@ from sqlalchemy.exc import DBAPIError, IntegrityError
 from sqlalchemy.orm import Session
 
 from backend.config import get_settings
-from backend.models import User
+from backend.models import AdminAuditLog, User
 from backend.schemas.user import AdminCreate, UserCreate, UserLogin
 from backend.security import create_access_token, hash_password, verify_password
 
@@ -25,7 +25,11 @@ def get_user_by_email(db: Session, email: str) -> User | None:
 	)
 
 
-def register_user(db: Session, user_data: UserCreate) -> User:
+def register_user(
+	db: Session,
+	user_data: UserCreate,
+	admin_actor_id: int | None = None,
+) -> User:
 	email = normalize_email(str(user_data.email))
 	if get_user_by_email(db, email) is not None:
 		raise ValueError("An account with this email already exists")
@@ -37,6 +41,15 @@ def register_user(db: Session, user_data: UserCreate) -> User:
 		role="user",
 	)
 	db.add(user)
+	if admin_actor_id is not None:
+		db.flush()
+		db.add(AdminAuditLog(
+			actor_user_id=admin_actor_id,
+			action="user.created_by_admin",
+			target_type="user",
+			target_id=str(user.id),
+			outcome="success",
+		))
 	db.commit()
 	db.refresh(user)
 	return user
@@ -67,6 +80,13 @@ def create_admin_user(db: Session, admin_data: AdminCreate) -> User:
 	)
 	db.add(user)
 	try:
+		db.flush()
+		db.add(AdminAuditLog(
+			actor_user_id=None,
+			action="admin.bootstrap_completed",
+			target_type="user",
+			target_id=str(user.id),
+		))
 		db.commit()
 	except DBAPIError as exc:
 		db.rollback()
@@ -86,6 +106,14 @@ def authenticate_user(db: Session, credentials: UserLogin) -> User | None:
 		return None
 	if not user.is_active:
 		return None
+	if user.role == "admin":
+		db.add(AdminAuditLog(
+			actor_user_id=user.id,
+			action="admin.login_succeeded",
+			target_type="user",
+			target_id=str(user.id),
+		))
+		db.commit()
 	return user
 
 

@@ -201,6 +201,7 @@ button { cursor: pointer; }
 .site-nav, .sidebar-nav { background: var(--secondary); color: #fff; }
 .nav-list { display: flex; align-items: center; gap: var(--space-xs); margin: 0; padding: 0; list-style: none; }
 .nav-link { display: inline-flex; min-height: 2.75rem; align-items: center; gap: var(--space-sm); border-radius: var(--radius-sm); padding: 0.625rem 0.75rem; color: #dce8e5; font-size: var(--text-sm); text-decoration: none; transition: background-color var(--transition), color var(--transition); }
+.nav-button { border: 0; background: transparent; font-family: inherit; font-size: var(--text-sm); cursor: pointer; }
 .nav-link:hover, .nav-link[aria-current="page"], .nav-link.active { background: rgba(255, 255, 255, 0.12); color: #fff; }
 .nav-toggle { min-height: 2.75rem; border: 1px solid rgba(255, 255, 255, 0.25); border-radius: var(--radius-sm); background: transparent; color: #fff; padding: 0.5rem 0.75rem; }
 .sidebar-nav .nav-list { display: block; }

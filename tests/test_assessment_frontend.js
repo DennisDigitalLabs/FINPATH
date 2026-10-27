@@ -17,9 +17,13 @@ const apiScript = fs.readFileSync(
 
 function createElement(values = {}) {
 	return {
+		children: [],
+		textContent: '',
 		classList: { toggle() {} },
 		style: {},
-		addEventListener() {},
+		listeners: {},
+		addEventListener(name, callback) { this.listeners[name] = callback; },
+		appendChild(child) { this.children.push(child); },
 		setAttribute() {},
 		focus() {},
 		...values
@@ -157,6 +161,92 @@ test('assessment submission preserves valid FormData fields and omits empty and 
 		},
 		assessment_status: 'completed'
 	});
+});
+
+test('assessment previous and next preserve entered values and stop at step boundaries', async () => {
+	const ids = [
+		'step-counter', 'progress-bar', 'progress-percent', 'progress-detail',
+		'previous-button', 'next-button', 'complete-button', 'validation-summary',
+		'review-list', 'completion-state', 'completion-title', 'completion-message',
+		'prediction-link'
+	];
+	const elements = new Map(ids.map((id) => [id, createElement()]));
+	const firstField = createElement({
+		value: '25-34',
+		checkValidity: () => true,
+		closest: () => ({ hidden: false })
+	});
+	const secondField = createElement({
+		value: 'Female',
+		checkValidity: () => true,
+		closest: () => ({ hidden: false })
+	});
+	const steps = [
+		createElement({
+			querySelector: () => createElement({ textContent: 'About you' }),
+			querySelectorAll: () => [firstField]
+		}),
+		createElement({
+			querySelector: () => createElement({ textContent: 'Income' }),
+			querySelectorAll: () => [secondField]
+		}),
+		createElement({
+			querySelector: () => createElement({ textContent: 'Review' }),
+			querySelectorAll: () => []
+		})
+	];
+	const stepItems = steps.map((_, index) =>
+		createElement({ querySelector: () => createElement({ textContent: String(index + 1) }) })
+	);
+	const formListeners = {};
+	const form = createElement({
+		addEventListener(name, callback) { formListeners[name] = callback; },
+		querySelectorAll: () => [firstField, secondField]
+	});
+	elements.set('assessment-form', form);
+	const window = {
+		FinpathAPI: {
+			getToken: () => 'test-token',
+			me: () => Promise.resolve({ id: 1 })
+		},
+		scrollTo() {}
+	};
+	const document = {
+		getElementById(id) {
+			if (!elements.has(id)) elements.set(id, createElement());
+			return elements.get(id);
+		},
+		querySelectorAll(selector) {
+			if (selector === '.assessment-step') return steps;
+			if (selector === '.step-item') return stepItems;
+			return [];
+		},
+		querySelector(selector) {
+			if (selector === '.progress-track') return createElement({ setAttribute() {} });
+			if (selector === '.assessment-sidebar') return createElement();
+			return createElement();
+		},
+		createElement
+	};
+	vm.runInNewContext(assessmentScript, { window, document, FormData });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	assert.equal(steps[0].hidden, false);
+	elements.get('next-button').listeners.click();
+	assert.equal(steps[1].hidden, false);
+	assert.equal(firstField.value, '25-34');
+	elements.get('previous-button').listeners.click();
+	assert.equal(steps[0].hidden, false);
+	assert.equal(firstField.value, '25-34');
+	elements.get('previous-button').listeners.click();
+	assert.equal(steps[0].hidden, false);
+	elements.get('next-button').listeners.click();
+	elements.get('next-button').listeners.click();
+	assert.equal(steps[2].hidden, false);
+	assert.equal(firstField.value, '25-34');
+	assert.equal(secondField.value, 'Female');
+	elements.get('next-button').listeners.click();
+	assert.equal(steps[2].hidden, false);
 });
 
 test('prediction retry reuses the saved assessment and checks for an existing prediction', async () => {
