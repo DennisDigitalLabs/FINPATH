@@ -13,10 +13,11 @@
 </head>
 <body class="admin-page">
 	<header class="admin-header" hidden><nav class="site-nav" aria-label="Primary navigation"><div class="container admin-nav-inner">
-		<a class="brand" href="/" aria-label="Home"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>Financial insights</strong><small>Financial Inclusion, Brighter Futures.</small></span></a>
-		<div class="top-nav-links"><a class="nav-link active" href="/admin" aria-current="page">FINPATH Admin Dashboard</a><a class="nav-link" href="/">Home</a><button class="nav-link nav-button" id="admin-logout" type="button">Log out</button></div>
+		<a class="brand admin-mobile-brand" href="/admin/" aria-label="FINPATH admin home"><span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span><span><strong>FINPATH</strong><small>ADMINISTRATION</small></span></a>
+		<div class="top-nav-links"><a class="nav-link active" href="/admin" aria-current="page">FINPATH Admin Dashboard</a><a class="nav-link" href="/">Home</a><button class="nav-link nav-button" id="admin-logout" type="button">Log out</button><button class="admin-menu-toggle" id="admin-menu-toggle" type="button" aria-label="Open admin navigation" aria-expanded="false" aria-controls="admin-sidebar"><span aria-hidden="true">☰</span></button></div>
 	</div></nav></header>
 	<main id="main-content">
+		<button class="admin-menu-backdrop" id="admin-menu-backdrop" type="button" aria-label="Close admin navigation" hidden tabindex="-1"></button>
 		<section class="admin-bootstrap-panel" id="first-admin-setup" aria-labelledby="first-admin-title" hidden>
 			<a class="admin-bootstrap-home" href="/">← Return to home</a>
 			<div class="admin-bootstrap-card">
@@ -39,7 +40,23 @@
 			</div>
 		</section>
 		<div class="container admin-layout" id="admin-dashboard" hidden>
-		<aside class="admin-sidebar" aria-label="Admin navigation"><div class="sidebar-label">Administration</div><nav class="side-nav"><a class="side-link active" href="#overview-section"><span aria-hidden="true">▦</span>Overview</a><a class="side-link" href="#admin-records-section"><span aria-hidden="true">▤</span>Records</a><a class="side-link" href="#model-monitoring-section"><span aria-hidden="true">◈</span>Model monitoring</a><a class="side-link" href="#health-section"><span aria-hidden="true">●</span>System health</a><a class="side-link" href="#operational-events-section"><span aria-hidden="true">!</span>Alerts and events</a><a class="side-link" href="#audit-logs-section"><span aria-hidden="true">≡</span>Audit logs</a><a class="side-link" href="#users-section"><span aria-hidden="true">○</span>User management</a></nav><div class="sidebar-note"><strong>Protected administration</strong><small>Access is limited to active administrator accounts.</small></div></aside>
+		<aside class="admin-sidebar" id="admin-sidebar" aria-label="Admin navigation">
+			<a class="admin-sidebar-brand" href="/admin/" aria-label="FINPATH admin home">
+				<span class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></span>
+				<span><strong>FINPATH</strong><small>ADMINISTRATION</small></span>
+			</a>
+			<div class="sidebar-label">Administration</div>
+			<nav class="side-nav">
+				<a class="side-link active" href="#overview-section" aria-current="page"><span aria-hidden="true">▦</span>Overview</a>
+				<a class="side-link" href="#admin-records-section"><span aria-hidden="true">▤</span>Records</a>
+				<a class="side-link" href="#users-section"><span aria-hidden="true">○</span>User management</a>
+				<a class="side-link" href="#model-monitoring-section"><span aria-hidden="true">◈</span>Model monitoring</a>
+				<a class="side-link" href="#health-section"><span aria-hidden="true">●</span>System health</a>
+				<a class="side-link" href="#operational-events-section"><span aria-hidden="true">!</span>Alerts &amp; acknowledgements</a>
+				<a class="side-link" href="#audit-logs-section"><span aria-hidden="true">≡</span>Audit logs</a>
+			</nav>
+			<div class="sidebar-note"><strong>Protected administration</strong><small>Access is limited to active administrator accounts.</small></div>
+		</aside>
 		<section class="admin-content" aria-labelledby="admin-title">
 			<section class="admin-intro"><div><p class="eyebrow">Operations overview</p><h1 id="admin-title">FINPATH Admin Dashboard</h1><p>Monitor available system totals, service health, and user account status.</p></div><div><button class="btn btn-outline" id="refresh-admin" type="button">Refresh data</button></div></section>
 			<div class="admin-notice" id="admin-state" role="status" aria-live="polite">Loading administration data…</div>

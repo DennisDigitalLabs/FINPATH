@@ -18,6 +18,10 @@ const adminHtml = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'admin', 'index.html'),
 	'utf8'
 );
+const adminCss = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'admin.css'),
+	'utf8'
+);
 
 function createElement(values = {}) {
 	return {
@@ -30,6 +34,7 @@ function createElement(values = {}) {
 		listeners: {},
 		classList: { toggle() {} },
 		addEventListener(name, callback) { this.listeners[name] = callback; },
+		focus() { this.focused = true; },
 		appendChild(child) { this.children.push(child); },
 		insertBefore(child) { this.children.unshift(child); },
 		replaceChildren(...children) { this.children = children; },
@@ -70,9 +75,21 @@ function createAdminPage() {
 		'operational-status-filter', 'operational-severity-filter',
 		'audit-filter-form', 'audit-action-filter', 'audit-actor-filter',
 		'audit-outcome-filter', 'audit-date-from', 'audit-date-to',
-		'clear-audit-filters'
+		'clear-audit-filters', 'admin-sidebar', 'admin-menu-toggle',
+		'admin-menu-backdrop'
 	];
 	const elements = new Map(ids.map((id) => [id, createElement()]));
+	const sidebarClasses = new Set();
+	elements.get('admin-sidebar').classList = {
+		toggle(name, force) {
+			if (force) sidebarClasses.add(name);
+			else sidebarClasses.delete(name);
+		},
+		contains(name) { return sidebarClasses.has(name); }
+	};
+	elements.get('admin-menu-toggle').attributes['aria-expanded'] = 'false';
+	elements.get('admin-menu-toggle').closest = (selector) =>
+		selector.includes('#admin-menu-toggle') ? elements.get('admin-menu-toggle') : null;
 	elements.get('user-search').value = '';
 	elements.get('user-active-filter').value = '';
 	elements.get('operational-status-filter').value = '';
@@ -128,24 +145,49 @@ function createAdminPage() {
 		createElement({ dataset: { recordType: 'recommendations' } })
 	];
 	const recordsNavLink = createElement({ href: '#admin-records-section' });
+	const sidebarLinks = [
+		'#overview-section', '#admin-records-section', '#users-section',
+		'#model-monitoring-section', '#health-section',
+		'#operational-events-section', '#audit-logs-section'
+	].map((href, index) => {
+		const link = createElement({
+			href,
+			attributes: index === 0 ? { 'aria-current': 'page' } : {},
+			classList: {
+				active: index === 0,
+				toggle(name, force) {
+					if (name === 'active') this.active = Boolean(force);
+				}
+			},
+			removeAttribute(name) { delete this.attributes[name]; }
+		});
+		return link;
+	});
 	const layout = createElement();
 	const header = createElement();
+	const documentListeners = {};
 	const document = {
 		createElement,
+		addEventListener(name, callback) { documentListeners[name] = callback; },
 		getElementById(id) { return elements.get(id); },
 		querySelector(selector) {
 			if (selector === '.admin-layout') return layout;
 			if (selector === '.admin-header') return header;
+			if (selector === '.admin-sidebar') return elements.get('admin-sidebar');
 			return createElement();
 		},
 		querySelectorAll(selector) {
 			if (selector === '[data-stat]') return statElements;
 			if (selector === '.admin-stat-link') return statCards;
 			if (selector === '.side-link[href="#admin-records-section"]') return [recordsNavLink];
+			if (selector === '.admin-sidebar .side-link') return sidebarLinks;
 			return [];
 		}
 	};
-	return { document, elements, layout, header, statElements, statCards, recordsNavLink };
+	return {
+		document, elements, layout, header, statElements, statCards,
+		recordsNavLink, sidebarLinks, documentListeners, sidebarClasses
+	};
 }
 
 function emptyAdminEventApi() {
@@ -164,6 +206,89 @@ function emptyAdminEventApi() {
 		})
 	};
 }
+
+test('admin page styling stays scoped and exposes active responsive navigation', async () => {
+	const page = createAdminPage();
+	const window = {
+		location: { href: '' },
+		FinpathAPI: {
+			getToken: () => 'owner-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
+			me: () => Promise.resolve({ role: 'admin' }),
+			getSystemAnalytics: () => Promise.resolve({
+				user_count: 0, active_user_count: 0, total_assessments: 0,
+				completed_assessments: 0, prediction_count: 0, recommendation_count: 0,
+				assessment_status_distribution: {}, risk_level_distribution: {},
+				risk_category_distribution: {}, assessment_completion_rate: null,
+				generated_at: '2026-10-22T10:00:00Z'
+			}),
+			getAdminHealth: () => Promise.resolve({
+				status: 'healthy', database: 'available', checked_at: '2026-10-22T10:00:00Z'
+			}),
+			getAdminModelMonitoring: () => Promise.resolve({
+				model_available: false, model_version: null, recorded_prediction_count: 0,
+				recorded_model_versions: {}, explanation_available_count: 0,
+				contributing_factors_available_count: 0, generated_at: '2026-10-22T10:00:00Z'
+			}),
+			...emptyAdminEventApi(),
+			listAdminUsers: () => Promise.resolve({ items: [], total: 0, page: 1, page_size: 10 }),
+			clearToken() {}
+		}
+	};
+
+	assert.match(adminHtml, /href="\/css\/admin\.css"/);
+	assert.doesNotMatch(adminHtml, /admin-redesign\.css/);
+	assert.match(adminHtml, /class="admin-sidebar-brand"/);
+	assert.match(adminCss, /\/\* Admin dashboard redesign: page shell \*\//);
+	assert.match(adminCss, /\.admin-page \.admin-sidebar-brand/);
+	assert.match(adminCss, /\.admin-page \.admin-layout\.container/);
+	assert.match(adminCss, /@media \(max-width: 48rem\)/);
+	assert.match(adminCss, /@media \(max-width: 36rem\)/);
+	assert.match(adminHtml, /id="admin-menu-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="admin-sidebar"/);
+	assert.match(adminCss, /\.admin-page \.admin-menu-toggle/);
+	vm.runInNewContext(adminScript, { window, document: page.document });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	const toggle = page.elements.get('admin-menu-toggle');
+	const backdrop = page.elements.get('admin-menu-backdrop');
+	toggle.listeners.click();
+	assert.equal(toggle.attributes['aria-expanded'], 'true');
+	assert.equal(toggle.attributes['aria-label'], 'Close admin navigation');
+	assert.equal(page.sidebarClasses.has('is-open'), true);
+	assert.equal(backdrop.hidden, false);
+	toggle.listeners.click();
+	assert.equal(toggle.attributes['aria-expanded'], 'false');
+	assert.equal(backdrop.hidden, true);
+
+	toggle.listeners.click();
+	page.documentListeners.keydown({ key: 'Escape' });
+	assert.equal(toggle.attributes['aria-expanded'], 'false');
+	assert.equal(toggle.focused, true);
+
+	toggle.listeners.click();
+	backdrop.listeners.click();
+	assert.equal(toggle.attributes['aria-expanded'], 'false');
+	assert.equal(backdrop.hidden, true);
+
+	toggle.listeners.click();
+	page.sidebarLinks[2].listeners.click();
+	assert.equal(toggle.attributes['aria-expanded'], 'false');
+	assert.equal(backdrop.hidden, true);
+
+	toggle.listeners.click();
+	page.documentListeners.click({ target: { closest: () => null } });
+	assert.equal(toggle.attributes['aria-expanded'], 'false');
+
+	page.sidebarLinks[3].listeners.click();
+	assert.equal(page.sidebarLinks[3].classList.active, true);
+	assert.equal(page.sidebarLinks[0].classList.active, false);
+	assert.equal(page.sidebarLinks[3].attributes['aria-current'], 'page');
+	assert.equal(page.sidebarLinks[0].attributes['aria-current'], undefined);
+});
 
 test('admin page denies a normal account before requesting administrative data', async () => {
 	const page = createAdminPage();
@@ -885,6 +1010,13 @@ test('admin distinguishes empty accounts and unavailable services from loaded da
 	assert.match(page.elements.get('health-state').textContent, /Database health check failed/);
 	assert.match(page.elements.get('generated-at').textContent, /Analytics unavailable/);
 	assert.equal(page.statElements[0].textContent, 'Unavailable');
+	assert.equal(page.elements.get('assessment-distribution').textContent, 'Analytics unavailable');
+	assert.equal(page.elements.get('risk-distribution').textContent, 'Analytics unavailable');
+	assert.equal(page.elements.get('risk-category-distribution').textContent, 'Analytics unavailable');
+	assert.equal(
+		page.elements.get('assessment-completion-rate').textContent,
+		'Unavailable: Analytics unavailable'
+	);
 	assert.match(page.elements.get('operational-events-state').textContent, /Recorded events unavailable/);
 	assert.match(page.elements.get('audit-logs-state').textContent, /Audit records unavailable/);
 });

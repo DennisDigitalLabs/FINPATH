@@ -49,6 +49,19 @@
 	var recordsTable = document.getElementById('admin-records-table');
 	var recordsHead = document.getElementById('admin-records-head');
 	var recordsBody = document.getElementById('admin-records-body');
+	var adminSidebar = document.getElementById('admin-sidebar');
+	var adminMenuToggle = document.getElementById('admin-menu-toggle');
+	var adminMenuBackdrop = document.getElementById('admin-menu-backdrop');
+
+	function setAdminMenuOpen(isOpen) {
+		adminSidebar.classList.toggle('is-open', isOpen);
+		adminMenuBackdrop.hidden = !isOpen;
+		adminMenuToggle.setAttribute('aria-expanded', String(isOpen));
+		adminMenuToggle.setAttribute(
+			'aria-label',
+			isOpen ? 'Close admin navigation' : 'Open admin navigation'
+		);
+	}
 
 	function setMessage(element, message, isError) {
 		element.textContent = message;
@@ -325,6 +338,8 @@
 			document.getElementById('generated-at').textContent = message;
 			setMessage(document.getElementById('assessment-distribution'), message, true);
 			setMessage(document.getElementById('risk-distribution'), message, true);
+			setMessage(document.getElementById('risk-category-distribution'), message, true);
+			setMessage(document.getElementById('assessment-completion-rate'), 'Unavailable: ' + message, true);
 		});
 	}
 
@@ -425,6 +440,7 @@
 				cell.textContent = value;
 				row.appendChild(cell);
 			});
+			row.children[4].className = 'admin-table-badge is-' + item.status;
 			var actionCell = document.createElement('td');
 			if (item.status === 'open' &&
 				(item.severity === 'warning' || item.severity === 'error' || item.severity === 'critical')) {
@@ -533,9 +549,12 @@
 				item.outcome,
 				item.target_type ? item.target_type + (item.target_id ? ' #' + item.target_id : '') : '—',
 				new Date(item.created_at).toLocaleString()
-			].forEach(function (value) {
+			].forEach(function (value, index) {
 				var cell = document.createElement('td');
 				cell.textContent = value;
+				if (index === 2) {
+					cell.className = 'admin-table-badge is-' + item.outcome;
+				}
 				row.appendChild(cell);
 			});
 			auditLogsBody.appendChild(row);
@@ -756,6 +775,25 @@
 		window.FinpathAPI.clearToken();
 		window.location.href = '/login';
 	});
+	adminMenuToggle.addEventListener('click', function () {
+		setAdminMenuOpen(adminMenuToggle.getAttribute('aria-expanded') !== 'true');
+	});
+	adminMenuBackdrop.addEventListener('click', function () {
+		setAdminMenuOpen(false);
+		adminMenuToggle.focus();
+	});
+	document.addEventListener('keydown', function (event) {
+		if (event.key === 'Escape' && adminMenuToggle.getAttribute('aria-expanded') === 'true') {
+			setAdminMenuOpen(false);
+			adminMenuToggle.focus();
+		}
+	});
+	document.addEventListener('click', function (event) {
+		if (adminMenuToggle.getAttribute('aria-expanded') !== 'true') return;
+		if (!event.target.closest('#admin-sidebar, #admin-menu-toggle')) {
+			setAdminMenuOpen(false);
+		}
+	});
 	document.getElementById('user-search-form').addEventListener('submit', function (event) {
 		event.preventDefault();
 		currentSearch = document.getElementById('user-search').value.trim();
@@ -804,6 +842,16 @@
 			recordsType = 'assessments';
 			document.getElementById('admin-records-heading').textContent = 'Assessments';
 			loadRecords();
+		});
+	});
+	document.querySelectorAll('.admin-sidebar .side-link').forEach(function (link) {
+		link.addEventListener('click', function () {
+			setAdminMenuOpen(false);
+			document.querySelectorAll('.admin-sidebar .side-link').forEach(function (item) {
+				item.classList.toggle('active', item === link);
+				if (item === link) item.setAttribute('aria-current', 'page');
+				else item.removeAttribute('aria-current');
+			});
 		});
 	});
 	document.querySelectorAll('.admin-stat-link').forEach(function (card) {
