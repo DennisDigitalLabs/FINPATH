@@ -691,14 +691,27 @@ test('audit and operational pagination ignore stale responses', async () => {
 		total: 20, page: 1, page_size: 10
 	});
 	auditRequests[0].resolve({
-		items: [{
-			id: 1, action: 'initial', actor_user_id: 1,
-			target_type: 'test', target_id: '1', outcome: 'success',
-			created_at: '2026-10-22T10:00:00Z'
-		}],
+		items: [
+			{
+				id: 1, action: 'admin.login_succeeded', actor_user_id: 1,
+				target_type: 'user', target_id: '1', outcome: 'success',
+				created_at: '2026-10-22T10:00:00Z'
+			},
+			{
+				id: 2, action: 'legacy.action', actor_user_id: 1,
+				target_type: 'test', target_id: '2', outcome: 'unknown',
+				created_at: '2026-10-22T09:00:00Z'
+			}
+		],
 		total: 20, page: 1, page_size: 10
 	});
 	await new Promise((resolve) => setImmediate(resolve));
+
+	const auditRows = page.elements.get('audit-logs-body').children;
+	assert.equal(auditRows[0].children[0].textContent, 'Administrator login succeeded');
+	assert.equal(auditRows[0].children[2].textContent, 'Success');
+	assert.equal(auditRows[1].children[0].textContent, 'Legacy Action');
+	assert.equal(auditRows[1].children[2].textContent, 'Not recorded (legacy/uninstrumented)');
 
 	page.elements.get('operational-events-next').listeners.click();
 	page.elements.get('audit-logs-next').listeners.click();
@@ -746,7 +759,7 @@ test('audit and operational pagination ignore stale responses', async () => {
 	assert.match(page.elements.get('operational-events-page-summary').textContent, /^Page 1 of 2/);
 	assert.equal(page.elements.get('operational-events-body').children[0].children[3].textContent, 'Current event');
 	assert.match(page.elements.get('audit-logs-page-summary').textContent, /^Page 1 of 2/);
-	assert.equal(page.elements.get('audit-logs-body').children[0].children[0].textContent, 'current');
+	assert.equal(page.elements.get('audit-logs-body').children[0].children[0].textContent, 'Current');
 
 	page.elements.get('operational-events-next').listeners.click();
 	page.elements.get('audit-logs-next').listeners.click();

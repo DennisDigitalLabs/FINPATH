@@ -19,6 +19,18 @@
 	var auditPage = 1;
 	var auditTotal = 0;
 	var auditRequestNumber = 0;
+	var auditActionLabels = {
+		'admin.login_succeeded': 'Administrator login succeeded',
+		'admin.account_created': 'Administrator account created',
+		'admin.account_creation_rejected': 'Administrator account creation rejected',
+		'admin.bootstrap_completed': 'Administrator setup completed',
+		'user.created_by_admin': 'User account created by administrator',
+		'user.creation_rejected': 'User account creation rejected',
+		'user.activated': 'User account activated',
+		'user.deactivated': 'User account deactivated',
+		'user.status_change_rejected': 'User account status change rejected',
+		'operational_event.acknowledged': 'Operational event acknowledged'
+	};
 	var adminState = document.getElementById('admin-state');
 	var userListState = document.getElementById('user-list-state');
 	var healthState = document.getElementById('health-state');
@@ -543,10 +555,14 @@
 		auditLogsBody.replaceChildren();
 		data.items.forEach(function (item) {
 			var row = document.createElement('tr');
+			var actionLabel = auditActionLabels[item.action] || item.action
+				.replace(/[._]+/g, ' ')
+				.replace(/\b\w/g, function (character) { return character.toUpperCase(); });
 			[
-				item.action,
+				actionLabel,
 				item.actor_user_id === null ? 'System/bootstrap' : String(item.actor_user_id),
-				item.outcome,
+				item.outcome === 'unknown' ? 'Not recorded (legacy/uninstrumented)' :
+					item.outcome.charAt(0).toUpperCase() + item.outcome.slice(1),
 				item.target_type ? item.target_type + (item.target_id ? ' #' + item.target_id : '') : '—',
 				new Date(item.created_at).toLocaleString()
 			].forEach(function (value, index) {

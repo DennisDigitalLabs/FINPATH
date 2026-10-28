@@ -441,7 +441,10 @@ def test_successful_admin_login_is_audited(client, db):
 	)
 	assert audit.status_code == 200
 	assert audit.json()["total"] == 1
-	assert audit.json()["items"][0]["action"] == "admin.login_succeeded"
+	entry = audit.json()["items"][0]
+	assert entry["action"] == "admin.login_succeeded"
+	assert entry["outcome"] == "success"
+	assert entry["actor_user_id"] == admin.id
 
 
 def test_prediction_service_failure_records_only_a_safe_operational_summary(

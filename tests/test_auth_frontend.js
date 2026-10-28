@@ -42,6 +42,14 @@ const renderConfig = fs.readFileSync(
 	path.join(__dirname, '..', 'render.yaml'),
 	'utf8'
 );
+const sharedStyles = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'style.css'),
+	'utf8'
+);
+const workspaceStyles = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'workspace-nav.css'),
+	'utf8'
+);
 
 function createElement(values = {}) {
 	return {
@@ -438,5 +446,26 @@ test('all canonical application pages include the organization footer', () => {
 		const html = fs.readFileSync(path.join(__dirname, '..', pagePath), 'utf8');
 		assert.match(html, /<footer\b/, `${pagePath} should have a footer`);
 		assert.match(html, requiredFooterText, `${pagePath} should have the organization credit`);
+	}
+});
+
+test('workspace pages share visible footer and user-sidebar styling', () => {
+	assert.match(sharedStyles, /\.site-footer\s*\{[^}]*border-top:\s*3px solid #[0-9a-f]{6}/i);
+	assert.match(sharedStyles, /\.dashboard-page,\s*\.assessment-page,[\s\S]*\.profile-page,[\s\S]*\.admin-page\s*\{[^}]*min-height:\s*100vh/);
+	assert.match(sharedStyles, /@media \(min-width: 48\.001rem\)[\s\S]*\.admin-page > \.site-footer\s*\{[^}]*margin-left:\s*16\.25rem/);
+	for (const selector of [
+		'.dashboard-page .dashboard-section',
+		'.assessment-page .assessment-workspace',
+		'.prediction-page .prediction-panel',
+		'.recommendations-page .recommendation-card',
+		'.analytics-page .analytics-panel',
+		'.profile-page .profile-panel'
+	]) {
+		assert.ok(sharedStyles.includes(selector), `${selector} should use the shared workspace card styling`);
+	}
+	assert.match(workspaceStyles, /background:\s*linear-gradient\(160deg,\s*#102a43,\s*#0b2238\)/);
+	for (const page of ['recommendations', 'analytics', 'profile']) {
+		assert.ok(workspaceStyles.includes('.' + page + '-page .' + page + '-sidebar'));
+		assert.ok(workspaceStyles.includes('.' + page + '-page .side-link.active'));
 	}
 });

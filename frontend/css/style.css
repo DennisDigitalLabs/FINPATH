@@ -117,10 +117,11 @@ button { cursor: pointer; }
 .text-danger { color: var(--danger); }
 
 .site-footer {
-	border-top: 1px solid rgba(255, 255, 255, 0.12);
-	background: var(--secondary);
-	color: #dce8e5;
-	padding: var(--space-lg) 0;
+	border-top: 3px solid #38c98b;
+	background: linear-gradient(110deg, #0b2238, #102a43);
+	color: #e7f2ef;
+	padding: 1.35rem 0;
+	box-shadow: 0 -6px 20px rgba(16, 42, 67, 0.08);
 }
 
 .site-footer-inner {
@@ -128,16 +129,106 @@ button { cursor: pointer; }
 	flex-wrap: wrap;
 	align-items: center;
 	justify-content: space-between;
-	gap: var(--space-sm) var(--space-lg);
+	gap: 0.65rem 1.5rem;
 }
 
 .site-footer p {
 	margin: 0;
 	font-size: var(--text-sm);
+	line-height: 1.5;
 }
 
 .site-footer strong {
 	color: #fff;
+}
+
+.dashboard-page .risk-card,
+.dashboard-page .confidence-card,
+.dashboard-page .assessment-status-card,
+.dashboard-page .dashboard-section,
+.assessment-page .assessment-workspace,
+.assessment-page .assessment-sidebar,
+.prediction-page .prediction-panel,
+.prediction-page .result-state,
+.recommendations-page .recommendation-card,
+.analytics-page .metric-card,
+.analytics-page .analytics-panel,
+.profile-page .profile-panel {
+	border: 1px solid #d5e2dd;
+	border-radius: 1rem;
+	background: linear-gradient(155deg, #fff, #fbfdfc);
+	box-shadow: 0 5px 16px rgba(16, 42, 67, 0.07);
+}
+
+.dashboard-page .risk-card:hover,
+.dashboard-page .confidence-card:hover,
+.dashboard-page .assessment-status-card:hover,
+.dashboard-page .action-card:hover,
+.recommendations-page .recommendation-card:hover,
+.analytics-page .metric-card:hover,
+.analytics-page .analytics-panel:hover,
+.profile-page .profile-panel:hover {
+	border-color: #b7d9ca;
+	box-shadow: 0 10px 24px rgba(16, 42, 67, 0.1);
+}
+
+.dashboard-page,
+.assessment-page,
+.prediction-page,
+.recommendations-page,
+.analytics-page,
+.profile-page,
+.admin-page {
+	display: flex;
+	min-height: 100vh;
+	flex-direction: column;
+}
+
+.dashboard-page > main,
+.assessment-page > main,
+.prediction-page > main,
+.recommendations-page > main,
+.analytics-page > main,
+.profile-page > main,
+.admin-page > main {
+	flex: 1 0 auto;
+}
+
+.dashboard-page > .site-footer,
+.assessment-page > .site-footer,
+.prediction-page > .site-footer,
+.recommendations-page > .site-footer,
+.analytics-page > .site-footer,
+.profile-page > .site-footer,
+.admin-page > .site-footer {
+	flex: 0 0 auto;
+}
+
+@media (min-width: 48.001rem) {
+	.admin-page > .site-footer {
+		margin-left: 16.25rem;
+	}
+}
+
+@media (min-width: 48.001rem) and (max-width: 64rem) {
+	.admin-page > .site-footer {
+		margin-left: 15.5rem;
+	}
+}
+
+@media (max-width: 48rem) {
+	.admin-page > .site-footer {
+		margin-left: 0;
+	}
+
+	.site-footer {
+		padding-block: 1.1rem;
+	}
+
+	.site-footer-inner {
+		align-items: flex-start;
+		flex-direction: column;
+	}
 }
 
 /* Buttons */

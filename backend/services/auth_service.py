@@ -112,6 +112,7 @@ def authenticate_user(db: Session, credentials: UserLogin) -> User | None:
 			action="admin.login_succeeded",
 			target_type="user",
 			target_id=str(user.id),
+			outcome="success",
 		))
 		db.commit()
 	return user
