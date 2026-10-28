@@ -48,14 +48,15 @@ function createElement(values = {}) {
 	};
 }
 
-async function submitLogin(role, pathname = '/admin/login', search = '?next=%2Fadmin') {
+async function submitLogin(role, pathname = '/admin/login', search = '?next=%2Fadmin', loginStatus) {
 	const elements = new Map();
 	const loginForm = createElement();
 	const email = createElement({ value: 'owner@example.com' });
 	const password = createElement({ value: 'OwnerPassword123' });
-	const loginError = createElement();
+	const loginError = createElement({ hidden: true, textContent: '' });
 	const status = createElement({ textContent: '' });
 	const loginSuccess = createElement({ hidden: true });
+	let token = 'existing-session';
 	const document = {
 		getElementById(id) { return elements.get(id); }
 	};
@@ -76,8 +77,17 @@ async function submitLogin(role, pathname = '/admin/login', search = '?next=%2Fa
 	const window = {
 		location: { pathname, search, href: '' },
 		FinpathAPI: {
-			login: () => Promise.resolve({}),
-			me: () => Promise.resolve({ role })
+			login: () => {
+				if (loginStatus) {
+					return Promise.reject(Object.assign(new Error('Incorrect email or password.'), {
+						status: loginStatus
+					}));
+				}
+				token = 'attempt-session';
+				return Promise.resolve({});
+			},
+			me: () => Promise.resolve({ role }),
+			clearToken() { token = null; }
 		}
 	};
 	class FormDataStub {
@@ -92,7 +102,10 @@ async function submitLogin(role, pathname = '/admin/login', search = '?next=%2Fa
 		destination: window.location.href,
 		heading: elements.get('login-title').textContent,
 		description: elements.get('auth-heading-description').textContent,
-		loginLink: elements.get('login-tab').href
+		loginLink: elements.get('login-tab').href,
+		errorMessage: loginError.textContent,
+		errorHidden: loginError.hidden,
+		token
 	};
 }
 
@@ -201,7 +214,10 @@ test('successful registration return displays a clear sign-in message', () => {
 
 test('login preserves admin destination for administrators and denies it to normal users', async () => {
 	assert.equal((await submitLogin('admin')).destination, '/admin');
-	assert.equal((await submitLogin('user')).destination, '/dashboard.html');
+	const userOnAdminLogin = await submitLogin('user');
+	assert.equal(userOnAdminLogin.destination, '');
+	assert.equal(userOnAdminLogin.errorMessage, 'Invalid administrator credentials or insufficient privileges.');
+	assert.equal(userOnAdminLogin.token, null);
 });
 
 test('public login uses standard-user wording while admin accounts still reach admin dashboard', async () => {
@@ -214,6 +230,20 @@ test('public login uses standard-user wording while admin accounts still reach a
 	assert.equal(admin.loginLink, '/login');
 	assert.equal(user.destination, '/dashboard.html');
 	assert.equal(user.heading, 'Welcome Back');
+});
+
+test('administrator login gives identical generic errors and clears sessions for every rejected attempt', async () => {
+	const standardUser = await submitLogin('user');
+	const unknownEmail = await submitLogin('admin', '/admin/login', '?next=%2Fadmin', 401);
+	const wrongPassword = await submitLogin('admin', '/admin/login', '?next=%2Fadmin', 401);
+	const failureMessage = 'Invalid administrator credentials or insufficient privileges.';
+
+	for (const attempt of [standardUser, unknownEmail, wrongPassword]) {
+		assert.equal(attempt.errorMessage, failureMessage);
+		assert.equal(attempt.errorHidden, false);
+		assert.equal(attempt.token, null);
+		assert.equal(attempt.destination, '');
+	}
 });
 
 test('public login page uses the shared auth flow and exposes only user registration', () => {

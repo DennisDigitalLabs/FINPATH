@@ -205,19 +205,20 @@
 .admin-page .admin-sidebar .sidebar-note {
 	gap: .2rem;
 	margin-top: auto;
-	border: 1px solid rgba(77, 213, 166, .2);
+	border: 1px solid rgba(104, 214, 175, .58);
 	border-radius: .7rem;
-	background: rgba(5, 132, 93, .2);
-	padding: .8rem .75rem;
+	background: linear-gradient(145deg, rgba(5, 132, 93, .4), rgba(4, 55, 59, .76));
+	padding: .9rem .8rem;
+	box-shadow: 0 0 0 1px rgba(104, 214, 175, .08), 0 8px 20px rgba(0, 0, 0, .12);
 }
 
 .admin-page .admin-sidebar .sidebar-note strong {
-	color: #d9fff0;
-	font-size: .78rem;
+	color: #e5fff4;
+	font-size: .82rem;
 }
 
 .admin-page .admin-sidebar .sidebar-note small {
-	color: #a8cabc;
+	color: #d0e7dc;
 	font-size: .67rem;
 	line-height: 1.45;
 }
@@ -954,8 +955,10 @@
 		bottom: 0;
 		left: 0;
 		width: min(20rem, 86vw);
+		min-height: 0;
 		max-height: calc(100dvh - 3.7rem);
 		overflow-y: auto;
+		overscroll-behavior-y: contain;
 		margin: 0;
 		border: 0;
 		border-radius: 0 .85rem .85rem 0;
@@ -979,7 +982,9 @@
 	.admin-page .admin-sidebar .side-nav {
 		display: grid;
 		grid-template-columns: 1fr;
+		flex: 0 0 auto;
 		align-content: start;
+		gap: .4rem;
 	}
 
 	.admin-page .admin-sidebar .side-link {
@@ -994,6 +999,7 @@
 
 	.admin-page .admin-sidebar .sidebar-note {
 		display: grid;
+		margin-top: 1rem;
 	}
 
 	.admin-page .admin-menu-backdrop:not([hidden]) {

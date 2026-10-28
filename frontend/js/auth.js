@@ -104,6 +104,11 @@
 				.then(function () { return window.FinpathAPI.me(); })
 				.then(function (user) {
 					var isAdmin = user && user.role === 'admin';
+					if (isAdminLogin && !isAdmin) {
+						var forbidden = new Error('Invalid administrator credentials or insufficient privileges.');
+						forbidden.status = 403;
+						throw forbidden;
+					}
 					var fallback = isAdmin ? '/admin' : '/dashboard.html';
 					var destination = Object.prototype.hasOwnProperty.call(destinationFiles, requestedDestination)
 						? destinationFiles[requestedDestination]
@@ -119,7 +124,17 @@
 					else if (destination === '/admin') destination = fallback;
 					window.location.href = destination;
 				})
-				.catch(function (reason) { status.textContent = ''; showError(loginError, reason.message); });
+				.catch(function (reason) {
+					status.textContent = '';
+					if (isAdminLogin) {
+						window.FinpathAPI.clearToken();
+						if (reason && (reason.status === 401 || reason.status === 403)) {
+							showError(loginError, 'Invalid administrator credentials or insufficient privileges.');
+							return;
+						}
+					}
+					showError(loginError, reason && reason.message ? reason.message : 'Sign in could not be completed. Please try again.');
+				});
 		});
 	}
 

@@ -248,6 +248,9 @@ test('admin page styling stays scoped and exposes active responsive navigation',
 	assert.match(adminCss, /\.admin-page \.admin-layout\.container/);
 	assert.match(adminCss, /@media \(max-width: 48rem\)/);
 	assert.match(adminCss, /@media \(max-width: 36rem\)/);
+	assert.match(adminCss, /\.admin-page \.admin-sidebar \{[^}]*overflow-y: auto/s);
+	assert.match(adminCss, /\.admin-page \.admin-sidebar \.side-nav \{[^}]*flex: 0 0 auto/s);
+	assert.match(adminCss, /\.admin-page \.admin-sidebar \.sidebar-note \{[^}]*margin-top: 1rem/s);
 	assert.match(adminHtml, /id="admin-menu-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="admin-sidebar"/);
 	assert.match(adminCss, /\.admin-page \.admin-menu-toggle/);
 	vm.runInNewContext(adminScript, { window, document: page.document });
