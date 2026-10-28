@@ -96,9 +96,18 @@
 			var destinationFiles = {
 				'/admin': '/admin',
 				'/admin.html': '/admin',
+				'/assessment': '/assessment.html',
+				'/assessment.html': '/assessment.html',
 				'/dashboard': '/dashboard.html',
+				'/dashboard.html': '/dashboard.html',
 				'/analytics': '/analytics.html',
-				'/recommendations': '/recommendations.html'
+				'/analytics.html': '/analytics.html',
+				'/profile': '/profile.html',
+				'/profile.html': '/profile.html',
+				'/prediction': '/prediction.html',
+				'/prediction.html': '/prediction.html',
+				'/recommendations': '/recommendations.html',
+				'/recommendations.html': '/recommendations.html'
 			};
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
 				.then(function () { return window.FinpathAPI.me(); })
@@ -113,9 +122,19 @@
 					var destination = Object.prototype.hasOwnProperty.call(destinationFiles, requestedDestination)
 						? destinationFiles[requestedDestination]
 						: fallback;
-					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations(?:\.html)?\?prediction_id=(\d+)$/);
-					if (recommendationDestination && Number.isSafeInteger(Number(recommendationDestination[1])) && Number(recommendationDestination[1]) > 0) {
-						destination = '/recommendations.html?prediction_id=' + recommendationDestination[1];
+					var predictionDestination = requestedDestination && requestedDestination.match(/^\/prediction(?:\.html)?\?prediction_id=(\d+)$/);
+					if (predictionDestination && Number.isSafeInteger(Number(predictionDestination[1])) && Number(predictionDestination[1]) > 0) {
+						destination = '/prediction.html?prediction_id=' + predictionDestination[1];
+					}
+					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations(?:\.html)?(?:\?prediction_id=(\d+))?$/);
+					if (recommendationDestination) {
+						if (!recommendationDestination[1]) {
+							destination = '/recommendations.html';
+						} else if (Number.isSafeInteger(Number(recommendationDestination[1])) && Number(recommendationDestination[1]) > 0) {
+							destination = '/recommendations.html?prediction_id=' + recommendationDestination[1];
+						} else {
+							destination = fallback;
+						}
 					}
 					else if (requestedDestination && requestedDestination.indexOf('/recommendations') === 0) {
 						destination = fallback;

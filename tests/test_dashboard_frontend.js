@@ -10,6 +10,10 @@ const dashboardScript = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'js', 'dashboard.js'),
 	'utf8'
 );
+const dashboardCss = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'dashboard.css'),
+	'utf8'
+);
 
 function createElement() {
 	return {
@@ -124,4 +128,9 @@ test('dashboard treats out-of-range model values as unavailable', async () => {
 	assert.equal(selectors.get('.risk-number').textContent, '—');
 	assert.equal(selectors.get('.risk-meter span').style.width, '0%');
 	assert.equal(selectors.get('.confidence-card').hidden, true);
+});
+
+test('dashboard model meter has no fabricated default percentage', () => {
+	assert.match(dashboardCss, /\.risk-meter span\s*\{[^}]*width:\s*0(?:px)?/);
+	assert.doesNotMatch(dashboardCss, /\.risk-meter span\s*\{[^}]*width:\s*\d+%/);
 });

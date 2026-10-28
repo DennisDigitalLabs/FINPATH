@@ -62,13 +62,13 @@ services:
         destination: /admin/login/index.html
       - type: rewrite
         source: /login
-        destination: /admin/login/index.html
+        destination: /login/index.html
       - type: rewrite
         source: /register
         destination: /register/index.html
       - type: rewrite
         source: /forgot-password
-        destination: /admin/login/index.html
+        destination: /login/index.html
       - type: rewrite
         source: /reset-password
         destination: /reset-password/index.html

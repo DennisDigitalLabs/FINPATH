@@ -898,8 +898,6 @@
 	});
 
 	function load() {
-		adminDashboard.hidden = false;
-		document.querySelector('.admin-header').hidden = false;
 		if (!window.FinpathAPI.getToken()) {
 			window.location.href = '/admin/login?next=%2Fadmin';
 			return;
@@ -910,6 +908,8 @@
 				forbidden.status = 403;
 				throw forbidden;
 			}
+			adminDashboard.hidden = false;
+			document.querySelector('.admin-header').hidden = false;
 			setMessage(adminState, 'Administrator access verified. Live data is shown below.', false);
 			loadAnalytics();
 			loadHealth();

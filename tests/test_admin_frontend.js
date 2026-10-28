@@ -109,6 +109,7 @@ function createAdminPage() {
 	elements.get('admin-dashboard').hidden = true;
 	elements.get('admin-records-section').hidden = true;
 	elements.get('first-admin-setup').hidden = true;
+	const header = createElement({ hidden: true });
 	elements.get('first-admin-form').elements = {
 		full_name: { value: 'First Owner' },
 		email: { value: 'owner@example.com' },
@@ -164,7 +165,6 @@ function createAdminPage() {
 		return link;
 	});
 	const layout = createElement();
-	const header = createElement();
 	const documentListeners = {};
 	const document = {
 		createElement,
@@ -318,6 +318,38 @@ test('admin page denies a normal account before requesting administrative data',
 	assert.equal(page.header.removed, true);
 });
 
+test('admin page remains hidden until the backend confirms administrator identity', async () => {
+	const page = createAdminPage();
+	let resolveIdentity;
+	let adminDataRequested = false;
+	const identity = new Promise((resolve) => { resolveIdentity = resolve; });
+	const window = {
+		location: { href: '' },
+		FinpathAPI: {
+			getToken: () => 'user-token',
+			getAdminBootstrapStatus: () => Promise.resolve({
+				setup_available: false,
+				administrator_exists: true,
+				setup_configured: true
+			}),
+			me: () => identity,
+			getSystemAnalytics() { adminDataRequested = true; return Promise.resolve({}); }
+		}
+	};
+
+	vm.runInNewContext(adminScript, { window, document: page.document });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	assert.equal(page.elements.get('admin-dashboard').hidden, true);
+	assert.equal(page.header.hidden, true);
+	resolveIdentity({ role: 'user' });
+	await new Promise((resolve) => setImmediate(resolve));
+
+	assert.equal(adminDataRequested, false);
+	assert.equal(page.layout.children.length, 2);
+	assert.match(page.layout.children[0].textContent, /Administrator access is required/i);
+});
+
 test('admin page shows the first-owner form and redirects after successful setup', async () => {
 	const page = createAdminPage();
 	let submitted;
@@ -370,7 +402,7 @@ test('an existing administrator is sent to admin login without showing bootstrap
 	await new Promise((resolve) => setImmediate(resolve));
 
 	assert.equal(page.elements.get('first-admin-setup').hidden, true);
-	assert.equal(page.elements.get('admin-dashboard').hidden, false);
+	assert.equal(page.elements.get('admin-dashboard').hidden, true);
 	assert.equal(window.location.href, '/admin/login?next=%2Fadmin');
 });
 

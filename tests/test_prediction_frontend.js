@@ -14,6 +14,10 @@ const predictionHtml = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'prediction.html'),
 	'utf8'
 );
+const predictionCss = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'prediction.css'),
+	'utf8'
+);
 
 function createElement() {
 	return {
@@ -136,6 +140,14 @@ test('prediction page shows an indeterminate loading state while fetching the re
 	assert.equal(result.processingState.hidden, false);
 	assert.equal(result.processingState.attributes['aria-busy'], 'true');
 	assert.doesNotMatch(predictionHtml, /aria-valuenow="40"|width: 40%/);
+});
+
+test('prediction meters have no fabricated default percentages', () => {
+	assert.match(predictionCss, /\.meter-track span\s*\{[^}]*width:\s*0(?:px)?/);
+	assert.match(predictionCss, /\.confidence-track span\s*\{[^}]*width:\s*0(?:px)?/);
+	assert.doesNotMatch(predictionCss, /\.(?:meter-track|confidence-track) span\s*\{[^}]*width:\s*\d+%/);
+	assert.match(predictionCss, /\.result-note p\s*\{[^}]*color:\s*var\(--text-secondary\)/);
+	assert.match(predictionCss, /\.result-note strong\s*\{[^}]*color:\s*var\(--secondary\)/);
 });
 
 test('prediction page renders real SHAP impacts and hides confidence not returned by the model', async () => {

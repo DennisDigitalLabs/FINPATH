@@ -116,6 +116,30 @@ button { cursor: pointer; }
 .text-warning { color: var(--warning); }
 .text-danger { color: var(--danger); }
 
+.site-footer {
+	border-top: 1px solid rgba(255, 255, 255, 0.12);
+	background: var(--secondary);
+	color: #dce8e5;
+	padding: var(--space-lg) 0;
+}
+
+.site-footer-inner {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: center;
+	justify-content: space-between;
+	gap: var(--space-sm) var(--space-lg);
+}
+
+.site-footer p {
+	margin: 0;
+	font-size: var(--text-sm);
+}
+
+.site-footer strong {
+	color: #fff;
+}
+
 /* Buttons */
 .btn {
 	display: inline-flex;

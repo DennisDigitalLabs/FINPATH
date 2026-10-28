@@ -34,6 +34,14 @@ const userLoginHtml = fs.readFileSync(
 	path.join(__dirname, '..', 'frontend', 'login', 'index.html'),
 	'utf8'
 );
+const landingStyles = fs.readFileSync(
+	path.join(__dirname, '..', 'frontend', 'css', 'landing.css'),
+	'utf8'
+);
+const renderConfig = fs.readFileSync(
+	path.join(__dirname, '..', 'render.yaml'),
+	'utf8'
+);
 
 function createElement(values = {}) {
 	return {
@@ -232,6 +240,16 @@ test('public login uses standard-user wording while admin accounts still reach a
 	assert.equal(user.heading, 'Welcome Back');
 });
 
+test('login returns standard users to supported internal destinations only', async () => {
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fassessment')).destination, '/assessment.html');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprofile')).destination, '/profile.html');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction')).destination, '/prediction.html');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction%3Fprediction_id%3D42')).destination, '/prediction.html?prediction_id=42');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations')).destination, '/recommendations.html');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations%3Fprediction_id%3D42')).destination, '/recommendations.html?prediction_id=42');
+	assert.equal((await submitLogin('user', '/login', '?next=https%3A%2F%2Fexample.invalid')).destination, '/dashboard.html');
+});
+
 test('administrator login gives identical generic errors and clears sessions for every rejected attempt', async () => {
 	const standardUser = await submitLogin('user');
 	const unknownEmail = await submitLogin('admin', '/admin/login', '?next=%2Fadmin', 401);
@@ -305,10 +323,9 @@ test('admin login identifies the FINPATH Admin Panel', async () => {
 	assert.equal(window.location.href, '/admin');
 });
 
-test('registration page follows the reference order and explains standard-user access', () => {
+test('registration page excludes login and register tabs and explains standard-user access', () => {
+	assert.doesNotMatch(registerHtml, /class="auth-tabs"|>Login<\/a>|>Register<\/a>/);
 	const orderedContent = [
-		registerHtml.indexOf('>Login</a>'),
-		registerHtml.indexOf('>Register</a>'),
 		registerHtml.indexOf('id="register-title">Create Account'),
 		registerHtml.indexOf('Public registration creates a standard FINPATH user account.'),
 		registerHtml.indexOf('for="register-name">Full Name'),
@@ -320,6 +337,7 @@ test('registration page follows the reference order and explains standard-user a
 
 	assert.ok(orderedContent.every((position) => position >= 0));
 	assert.deepEqual(orderedContent, [...orderedContent].sort((left, right) => left - right));
+	assert.match(registerHtml, /Already have an account\? <a href="\/login">Sign In<\/a>/);
 });
 
 function createApiHarness(responseStatus, responseBody) {
@@ -365,11 +383,60 @@ test('protected-resource 401 still reports an expired session and clears its tok
 	assert.equal(api.getToken(), null);
 });
 
+test('landing provides separate ordinary-user and protected-administrator access', () => {
+	assert.match(landingHtml, /<section class="account-access-card" aria-labelledby="user-access-title">[\s\S]*<h3 id="user-access-title">Ordinary User<\/h3>[\s\S]*href="\/register">Create Account<\/a>[\s\S]*href="\/login">Log In<\/a>/);
+	assert.match(landingHtml, /<section class="account-access-card" aria-labelledby="admin-access-title">[\s\S]*<h3 id="admin-access-title">Administrator<\/h3>[\s\S]*Sign in with your existing administrator account\.[\s\S]*href="\/admin\/login\?next=%2Fadmin">Log In<\/a>/);
+	const adminAccessSection = landingHtml.match(/<section class="account-access-card" aria-labelledby="admin-access-title">([\s\S]*?)<\/section>/);
+	assert.ok(adminAccessSection);
+	assert.doesNotMatch(adminAccessSection[1], /Create Account|href="\/register"|href="\/admin"/);
+	assert.ok(landingHtml.indexOf('class="account-access-section"') < landingHtml.indexOf('class="value-strip"'));
+	assert.match(landingHtml, /<strong>Ordinary User<\/strong>[\s\S]*href="\/register">Create Account<\/a>[\s\S]*href="\/login">Log In<\/a>/);
+	assert.match(landingHtml, /<strong>Administrator<\/strong>[\s\S]*href="\/admin\/login\?next=%2Fadmin">Log In<\/a>/);
+	assert.doesNotMatch(landingHtml, /href="\/admin">Create Account<\/a>/);
+	assert.match(landingStyles, /\.account-access-grid\s*\{[^}]*grid-template-columns:\s*repeat\(2,\s*minmax\(0,\s*1fr\)\)/);
+	assert.match(landingStyles, /@media \(max-width: 48rem\)[\s\S]*?\.account-access-grid\s*\{[^}]*grid-template-columns:\s*1fr/);
+});
+
+test('deployed authentication and recovery routes use the ordinary-user login page', () => {
+	assert.match(renderConfig, /source: \/login\s+destination: \/login\/index\.html/);
+	assert.match(renderConfig, /source: \/forgot-password\s+destination: \/login\/index\.html/);
+	assert.doesNotMatch(renderConfig, /source: \/login\s+destination: \/admin\/login\/index\.html/);
+});
+
 test('landing and dashboard provide the requested navigation links', () => {
 	assert.match(landingHtml, /class="btn btn-outline nav-admin" href="\/admin\/login\?next=%2Fadmin">Admin<\/a>/);
 	assert.match(landingHtml, /class="mobile-menu-panel">[\s\S]*href="\/admin\/login\?next=%2Fadmin">Admin<\/a>[\s\S]*href="\/login">Log In<\/a>[\s\S]*href="\/register">Get Started<\/a>/);
-	assert.match(landingHtml, /href="\/register">Get Started<\/a>/);
 	assert.match(landingHtml, /class="btn btn-outline nav-login" href="\/login">Log In<\/a>/);
 	assert.doesNotMatch(adminLoginHtml, /href="\/register"/);
 	assert.match(dashboardHtml, /class="nav-link" href="\/">Home<\/a>/);
+});
+
+test('all canonical application pages include the organization footer', () => {
+	const pagePaths = [
+		'frontend/admin.html',
+		'frontend/index.html',
+		'frontend/login.html',
+		'frontend/register.html',
+		'frontend/reset-password.html',
+		'frontend/forgot-password.html',
+		'frontend/forgot-password/index.html',
+		'frontend/register/index.html',
+		'frontend/login/index.html',
+		'frontend/admin/login/index.html',
+		'frontend/admin/index.html',
+		'frontend/dashboard.html',
+		'frontend/assessment.html',
+		'frontend/prediction.html',
+		'frontend/recommendations.html',
+		'frontend/analytics.html',
+		'frontend/profile.html',
+		'frontend/reset-password/index.html'
+	];
+	const requiredFooterText = /Designed and Developed by[\s\S]{0,40}Dennis Digital Labs[\s\S]{0,30}&amp; AI[\s\S]*© 2026 Financial Inclusion, Brighter Futures\./;
+
+	for (const pagePath of pagePaths) {
+		const html = fs.readFileSync(path.join(__dirname, '..', pagePath), 'utf8');
+		assert.match(html, /<footer\b/, `${pagePath} should have a footer`);
+		assert.match(html, requiredFooterText, `${pagePath} should have the organization credit`);
+	}
 });
