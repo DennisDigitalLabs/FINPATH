@@ -249,8 +249,10 @@ test('admin page styling stays scoped and exposes active responsive navigation',
 	assert.match(adminCss, /@media \(max-width: 48rem\)/);
 	assert.match(adminCss, /@media \(max-width: 36rem\)/);
 	assert.match(adminCss, /\.admin-page \.admin-sidebar \{[^}]*overflow-y: auto/s);
+	assert.match(adminCss, /@media \(min-width: 48\.001rem\) and \(max-height: 48rem\)/);
 	assert.match(adminCss, /\.admin-page \.admin-sidebar \.side-nav \{[^}]*flex: 0 0 auto/s);
 	assert.match(adminCss, /\.admin-page \.admin-sidebar \.sidebar-note \{[^}]*margin-top: 1rem/s);
+	assert.match(adminCss, /\.admin-page \.admin-sidebar \.sidebar-note small \{[^}]*font-size: \.72rem/s);
 	assert.match(adminHtml, /id="admin-menu-toggle"[^>]*aria-expanded="false"[^>]*aria-controls="admin-sidebar"/);
 	assert.match(adminCss, /\.admin-page \.admin-menu-toggle/);
 	vm.runInNewContext(adminScript, { window, document: page.document });
@@ -765,20 +767,55 @@ test('audit and operational pagination ignore stale responses', async () => {
 	page.elements.get('audit-logs-next').listeners.click();
 	assert.deepEqual(operationalRequests.slice(3).map(({ pageNumber }) => pageNumber), [2]);
 	assert.deepEqual(auditRequests.slice(3).map(({ pageNumber }) => pageNumber), [2]);
-	operationalRequests[3].resolve({ items: [], total: 0, page: 2, page_size: 10 });
-	auditRequests[3].resolve({ items: [], total: 0, page: 2, page_size: 10 });
+	operationalRequests[3].resolve({
+		items: [{
+			id: 4, event_type: 'test', source: 'test', severity: 'info',
+			summary: 'Page two event', status: 'acknowledged',
+			occurred_at: '2026-10-22T10:00:00Z', acknowledged_at: null
+		}],
+		total: 20, page: 2, page_size: 10
+	});
+	auditRequests[3].resolve({
+		items: [{
+			id: 4, action: 'page.two.event', actor_user_id: 1,
+			target_type: 'test', target_id: '4', outcome: 'success',
+			created_at: '2026-10-22T10:00:00Z'
+		}],
+		total: 20, page: 2, page_size: 10
+	});
 	await new Promise((resolve) => setImmediate(resolve));
+	assert.match(page.elements.get('operational-events-page-summary').textContent, /^Page 2 of 2/);
+	assert.equal(page.elements.get('operational-events-body').children[0].children[3].textContent, 'Page two event');
+	assert.match(page.elements.get('audit-logs-page-summary').textContent, /^Page 2 of 2/);
+	assert.equal(page.elements.get('audit-logs-body').children[0].children[0].textContent, 'Page Two Event');
+	assert.equal(page.elements.get('audit-logs-previous').disabled, false);
+	assert.equal(page.elements.get('audit-logs-next').disabled, true);
+
+	page.elements.get('operational-events-previous').listeners.click();
+	page.elements.get('audit-logs-previous').listeners.click();
 	assert.equal(operationalRequests.length, 5);
 	assert.equal(operationalRequests[4].pageNumber, 1);
 	assert.equal(auditRequests.length, 5);
 	assert.equal(auditRequests[4].pageNumber, 1);
-	operationalRequests[4].resolve({ items: [], total: 0, page: 1, page_size: 10 });
-	auditRequests[4].resolve({ items: [], total: 0, page: 1, page_size: 10 });
+	auditRequests[4].resolve({
+		items: [{
+			id: 1, action: 'first.page.event', actor_user_id: 1,
+			target_type: 'test', target_id: '1', outcome: 'success',
+			created_at: '2026-10-22T10:00:00Z'
+		}],
+		total: 20, page: 1, page_size: 10
+	});
+	operationalRequests[4].resolve({
+		items: [{
+			id: 1, event_type: 'test', source: 'test', severity: 'info',
+			summary: 'Page one event', status: 'acknowledged',
+			occurred_at: '2026-10-22T10:00:00Z', acknowledged_at: null
+		}],
+		total: 20, page: 1, page_size: 10
+	});
 	await new Promise((resolve) => setImmediate(resolve));
-	assert.match(page.elements.get('operational-events-page-summary').textContent, /^Page 1 of 1/);
-	assert.equal(page.elements.get('operational-events-state').textContent, 'No operational events have been recorded.');
-	assert.match(page.elements.get('audit-logs-page-summary').textContent, /^Page 1 of 1/);
-	assert.equal(page.elements.get('audit-logs-state').textContent, 'No audit records have been recorded.');
+	assert.match(page.elements.get('audit-logs-page-summary').textContent, /^Page 1 of 2/);
+	assert.equal(page.elements.get('audit-logs-body').children[0].children[0].textContent, 'First Page Event');
 
 	page.elements.get('audit-action-filter').value = 'user.deactivated';
 	page.elements.get('audit-actor-filter').value = '7';

@@ -103,6 +103,8 @@
 	width: 16.25rem;
 	min-height: 100vh;
 	flex-direction: column;
+	overflow-y: auto;
+	overscroll-behavior-y: contain;
 	margin: 0;
 	border: 0;
 	background: linear-gradient(180deg, var(--admin-navy), var(--admin-navy-deep));
@@ -115,7 +117,7 @@
 	min-height: 3.5rem;
 	align-items: center;
 	gap: .8rem;
-	margin: -.15rem .15rem 2.2rem;
+	margin: -.15rem .15rem 1.35rem;
 	border-bottom: 1px solid rgba(255, 255, 255, .13);
 	padding: 0 .45rem 1.15rem;
 	color: #fff;
@@ -158,12 +160,12 @@
 .admin-page .admin-sidebar .side-nav {
 	display: grid;
 	align-content: start;
-	gap: .35rem;
+	gap: .25rem;
 }
 
 .admin-page .admin-sidebar .side-link {
 	position: relative;
-	min-height: 2.85rem;
+	min-height: 2.7rem;
 	gap: .75rem;
 	border: 0;
 	border-radius: .65rem;
@@ -203,6 +205,7 @@
 }
 
 .admin-page .admin-sidebar .sidebar-note {
+	flex: 0 0 auto;
 	gap: .2rem;
 	margin-top: auto;
 	border: 1px solid rgba(104, 214, 175, .58);
@@ -219,8 +222,9 @@
 
 .admin-page .admin-sidebar .sidebar-note small {
 	color: #d0e7dc;
-	font-size: .67rem;
-	line-height: 1.45;
+	font-size: .72rem;
+	line-height: 1.5;
+	overflow-wrap: anywhere;
 }
 
 /* Dashboard content and cards */
@@ -691,6 +695,22 @@
 
 	.admin-page .stat-grid {
 		grid-template-columns: repeat(2, minmax(0, 1fr));
+	}
+}
+
+@media (min-width: 48.001rem) and (max-height: 48rem) {
+	.admin-page .admin-sidebar-brand {
+		margin-bottom: .85rem;
+	}
+
+	.admin-page .admin-sidebar .side-link {
+		min-height: 2.45rem;
+		padding-block: .45rem;
+	}
+
+	.admin-page .admin-sidebar .sidebar-note {
+		margin-top: 1rem;
+		padding: .7rem;
 	}
 }
 
