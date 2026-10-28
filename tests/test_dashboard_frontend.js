@@ -27,7 +27,7 @@ function createElement() {
 	};
 }
 
-async function loadDashboard(prediction) {
+async function loadDashboard(prediction, pathname = '/dashboard', search = '', hash = '') {
 	const selectors = new Map([
 		['.dashboard-content', createElement()],
 		['.welcome-band', createElement()],
@@ -71,7 +71,10 @@ async function loadDashboard(prediction) {
 		}
 	};
 	const window = {
-		location: { href: '' },
+		location: { pathname, search, hash, href: '' },
+		history: {
+			replaceState(_state, _title, url) { window.location.href = url; }
+		},
 		FinpathAPI: {
 			getToken: () => 'test-token',
 			me: () => Promise.resolve({ id: 7 }),
@@ -95,8 +98,15 @@ async function loadDashboard(prediction) {
 
 	vm.runInNewContext(dashboardScript, { window, document });
 	await new Promise((resolve) => setImmediate(resolve));
+	selectors.location = window.location;
 	return selectors;
 }
+
+test('dashboard removes the legacy file extension while preserving query and hash', async () => {
+	const selectors = await loadDashboard(null, '/dashboard.html', '?view=activity', '#recent');
+
+	assert.equal(selectors.location.href, '/dashboard?view=activity#recent');
+});
 
 test('dashboard renders model probability and omits the fabricated assessment progress meter', async () => {
 	const selectors = await loadDashboard({

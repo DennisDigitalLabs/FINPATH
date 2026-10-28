@@ -236,26 +236,28 @@ test('login preserves admin destination for administrators and denies it to norm
 	assert.equal(userOnAdminLogin.token, null);
 });
 
-test('public login uses standard-user wording while admin accounts still reach admin dashboard', async () => {
+test('public login rejects administrator accounts and accepts standard users', async () => {
 	const admin = await submitLogin('admin', '/login', '?next=%2Fdashboard');
 	const user = await submitLogin('user', '/login', '?next=%2Fdashboard');
 
-	assert.equal(admin.destination, '/admin');
+	assert.equal(admin.destination, '');
+	assert.equal(admin.errorMessage, 'Invalid user credentials or insufficient privileges.');
+	assert.equal(admin.token, null);
 	assert.equal(admin.heading, 'Welcome Back');
 	assert.equal(admin.description, 'Sign in to continue to your FINPATH account.');
 	assert.equal(admin.loginLink, '/login');
-	assert.equal(user.destination, '/dashboard.html');
+	assert.equal(user.destination, '/dashboard');
 	assert.equal(user.heading, 'Welcome Back');
 });
 
 test('login returns standard users to supported internal destinations only', async () => {
-	assert.equal((await submitLogin('user', '/login', '?next=%2Fassessment')).destination, '/assessment.html');
-	assert.equal((await submitLogin('user', '/login', '?next=%2Fprofile')).destination, '/profile.html');
-	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction')).destination, '/prediction.html');
-	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction%3Fprediction_id%3D42')).destination, '/prediction.html?prediction_id=42');
-	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations')).destination, '/recommendations.html');
-	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations%3Fprediction_id%3D42')).destination, '/recommendations.html?prediction_id=42');
-	assert.equal((await submitLogin('user', '/login', '?next=https%3A%2F%2Fexample.invalid')).destination, '/dashboard.html');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fassessment')).destination, '/assessment');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprofile')).destination, '/profile');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction')).destination, '/prediction');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Fprediction%3Fprediction_id%3D42')).destination, '/prediction?prediction_id=42');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations')).destination, '/recommendations');
+	assert.equal((await submitLogin('user', '/login', '?next=%2Frecommendations%3Fprediction_id%3D42')).destination, '/recommendations?prediction_id=42');
+	assert.equal((await submitLogin('user', '/login', '?next=https%3A%2F%2Fexample.invalid')).destination, '/dashboard');
 });
 
 test('administrator login gives identical generic errors and clears sessions for every rejected attempt', async () => {

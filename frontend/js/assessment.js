@@ -202,7 +202,7 @@
 				validationSummary.hidden = true;
 				completionTitle.focus();
 				completionMessage.textContent = 'Your assessment and explainable FINPATH prediction are ready.';
-				predictionLink.href = 'prediction.html?assessment_id=' + encodeURIComponent(result.assessment.id) + '&prediction_id=' + encodeURIComponent(result.prediction.id);
+				predictionLink.href = '/prediction?assessment_id=' + encodeURIComponent(result.assessment.id) + '&prediction_id=' + encodeURIComponent(result.prediction.id);
 				completionState.hidden = false;
 				completionState.focus();
 				window.scrollTo({ top: 0, behavior: 'smooth' });

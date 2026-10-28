@@ -165,7 +165,7 @@
 		if (reason && reason.status === 401) { window.location.href = loginHref(); return; }
 		showError(
 			reason && reason.message ? reason.message : 'We could not load your recommendations. Please try again.',
-			'prediction.html?prediction_id=' + encodeURIComponent(predictionId)
+			'/prediction?prediction_id=' + encodeURIComponent(predictionId)
 		);
 	});
 }());

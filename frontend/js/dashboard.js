@@ -1,6 +1,10 @@
 (function () {
 	'use strict';
 
+	if (window.location.pathname === '/dashboard.html') {
+		window.history.replaceState(null, '', '/dashboard' + window.location.search + window.location.hash);
+	}
+
 	var content = document.querySelector('.dashboard-content');
 	var errorState = document.createElement('div');
 	errorState.className = 'dashboard-notice';

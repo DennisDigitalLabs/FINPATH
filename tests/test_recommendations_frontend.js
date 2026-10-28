@@ -205,7 +205,7 @@ test('scoped request failure shows an error without falling back to the unfilter
 	assert.deepEqual(calls.scoped, [42]);
 	assert.equal(calls.unfiltered, 0);
 	assert.equal(elements['recommendation-error'].hidden, false);
-	assert.equal(elements['recommendation-error'].children[0].href, 'prediction.html?prediction_id=42');
+	assert.equal(elements['recommendation-error'].children[0].href, '/prediction?prediction_id=42');
 	assert.equal(selectors.get('.demo-pill').textContent, 'Recommendations unavailable');
 });
 
@@ -220,7 +220,7 @@ test('unauthenticated recommendations redirect preserves the selected prediction
 	assert.equal(returnedUrl.searchParams.get('prediction_id'), '00042');
 
 	const destination = await executeLogin(next);
-	assert.equal(destination, '/recommendations.html?prediction_id=00042');
+	assert.equal(destination, '/recommendations?prediction_id=00042');
 });
 
 test('unsafe and invalid recommendation return destinations use the safe fallback', async () => {
@@ -233,7 +233,7 @@ test('unsafe and invalid recommendation return destinations use the safe fallbac
 		'/recommendations?prediction_id=42&next=https://attacker.example',
 		'/recommendations/../admin?prediction_id=42'
 	]) {
-		assert.equal(await executeLogin(next), '/dashboard.html', next);
+		assert.equal(await executeLogin(next), '/dashboard', next);
 	}
 });
 

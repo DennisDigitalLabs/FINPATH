@@ -96,18 +96,18 @@
 			var destinationFiles = {
 				'/admin': '/admin',
 				'/admin.html': '/admin',
-				'/assessment': '/assessment.html',
-				'/assessment.html': '/assessment.html',
-				'/dashboard': '/dashboard.html',
-				'/dashboard.html': '/dashboard.html',
-				'/analytics': '/analytics.html',
-				'/analytics.html': '/analytics.html',
-				'/profile': '/profile.html',
-				'/profile.html': '/profile.html',
-				'/prediction': '/prediction.html',
-				'/prediction.html': '/prediction.html',
-				'/recommendations': '/recommendations.html',
-				'/recommendations.html': '/recommendations.html'
+				'/assessment': '/assessment',
+				'/assessment.html': '/assessment',
+				'/dashboard': '/dashboard',
+				'/dashboard.html': '/dashboard',
+				'/analytics': '/analytics',
+				'/analytics.html': '/analytics',
+				'/profile': '/profile',
+				'/profile.html': '/profile',
+				'/prediction': '/prediction',
+				'/prediction.html': '/prediction',
+				'/recommendations': '/recommendations',
+				'/recommendations.html': '/recommendations'
 			};
 			window.FinpathAPI.login({ email: data.get('email'), password: data.get('password') }, data.get('remember') === 'on')
 				.then(function () { return window.FinpathAPI.me(); })
@@ -118,20 +118,26 @@
 						forbidden.status = 403;
 						throw forbidden;
 					}
-					var fallback = isAdmin ? '/admin' : '/dashboard.html';
+					if (!isAdminLogin && isAdmin) {
+						window.FinpathAPI.clearToken();
+						var userLoginForbidden = new Error('Invalid user credentials or insufficient privileges.');
+						userLoginForbidden.status = 403;
+						throw userLoginForbidden;
+					}
+					var fallback = isAdmin ? '/admin' : '/dashboard';
 					var destination = Object.prototype.hasOwnProperty.call(destinationFiles, requestedDestination)
 						? destinationFiles[requestedDestination]
 						: fallback;
 					var predictionDestination = requestedDestination && requestedDestination.match(/^\/prediction(?:\.html)?\?prediction_id=(\d+)$/);
 					if (predictionDestination && Number.isSafeInteger(Number(predictionDestination[1])) && Number(predictionDestination[1]) > 0) {
-						destination = '/prediction.html?prediction_id=' + predictionDestination[1];
+						destination = '/prediction?prediction_id=' + predictionDestination[1];
 					}
 					var recommendationDestination = requestedDestination && requestedDestination.match(/^\/recommendations(?:\.html)?(?:\?prediction_id=(\d+))?$/);
 					if (recommendationDestination) {
 						if (!recommendationDestination[1]) {
-							destination = '/recommendations.html';
+							destination = '/recommendations';
 						} else if (Number.isSafeInteger(Number(recommendationDestination[1])) && Number(recommendationDestination[1]) > 0) {
-							destination = '/recommendations.html?prediction_id=' + recommendationDestination[1];
+							destination = '/recommendations?prediction_id=' + recommendationDestination[1];
 						} else {
 							destination = fallback;
 						}
@@ -151,6 +157,10 @@
 							showError(loginError, 'Invalid administrator credentials or insufficient privileges.');
 							return;
 						}
+					}
+					if (!isAdminLogin && reason && reason.status === 403) {
+						showError(loginError, 'Invalid user credentials or insufficient privileges.');
+						return;
 					}
 					showError(loginError, reason && reason.message ? reason.message : 'Sign in could not be completed. Please try again.');
 				});
