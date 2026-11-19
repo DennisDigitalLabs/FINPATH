@@ -69,14 +69,36 @@ def test_user_response_is_safe_and_serializes_orm_object():
     assert "hashed_password" not in payload
 
 
-def test_assessment_schema_accepts_flexible_data():
+def test_assessment_schema_accepts_allowlisted_flat_frontend_data():
     assessment = AssessmentCreate(
-        assessment_data={"future_feature": {"value": 10}},
+        assessment_data={
+            "age_range": "25-34",
+            "monthly_income": "25000",
+            "household_size": "3",
+        },
         assessment_status=" DRAFT ",
     )
 
-    assert assessment.assessment_data["future_feature"]["value"] == 10
+    assert assessment.assessment_data == {
+        "age_range": "25-34",
+        "monthly_income": "25000",
+        "household_size": "3",
+    }
     assert assessment.assessment_status == "draft"
+
+
+def test_assessment_schema_rejects_unexpected_nested_and_out_of_range_data():
+    with pytest.raises(ValidationError):
+        AssessmentCreate(assessment_data={"future_feature": 10})
+
+    with pytest.raises(ValidationError):
+        AssessmentCreate(assessment_data={"age_range": {"value": "25-34"}})
+
+    with pytest.raises(ValidationError):
+        AssessmentCreate(assessment_data={"household_size": "31"})
+
+    with pytest.raises(ValidationError):
+        AssessmentCreate(assessment_data={"monthly_income": "-1"})
 
 
 def test_assessment_response_serializes_orm_object():
@@ -85,7 +107,7 @@ def test_assessment_response_serializes_orm_object():
         id=2,
         user_id=1,
         assessment_status="completed",
-        assessment_data={"score": 0.5},
+        assessment_data={"legacy_nested_field": {"score": 0.5}},
         assessment_date=now,
         created_at=now,
         updated_at=now,
@@ -94,7 +116,7 @@ def test_assessment_response_serializes_orm_object():
     response = AssessmentResponse.model_validate(assessment)
 
     assert response.id == 2
-    assert response.assessment_data == {"score": 0.5}
+    assert response.assessment_data == {"legacy_nested_field": {"score": 0.5}}
 
 
 def test_prediction_schema_validates_ml_output():

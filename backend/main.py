@@ -12,6 +12,7 @@ from typing import Any, Dict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
 
 from backend.config import get_settings
 from backend.database import close_db, init_db
@@ -91,16 +92,28 @@ async def add_security_headers(request: Request, call_next):
 
 @app.exception_handler(Exception)
 async def handle_unexpected_error(request: Request, exc: Exception):
-    logger.error(
-        "Unhandled API exception for %s %s",
-        request.method,
-        request.url.path,
-        exc_info=(type(exc), exc, exc.__traceback__),
-    )
+    logger.error("Unhandled API exception (%s)", type(exc).__name__)
     return JSONResponse(
         status_code=500,
         content={"detail": "An unexpected internal error occurred"},
     )
+
+
+@app.exception_handler(RequestValidationError)
+async def handle_validation_error(
+    request: Request,
+    exc: RequestValidationError,
+):
+    details = [
+        {
+            "loc": list(error.get("loc", ())),
+            "msg": error.get("msg", "Invalid request"),
+            "type": error.get("type", "value_error"),
+        }
+        for error in exc.errors()
+    ]
+    return JSONResponse(status_code=422, content={"detail": details})
+
 
 app.include_router(auth_router)
 app.include_router(assessment_router)

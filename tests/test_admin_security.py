@@ -16,30 +16,51 @@ from sqlalchemy import create_engine
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
+from sqlalchemy import text
 
 from backend import create_admin as admin_cli
+from backend.config import get_settings
 from backend import dependencies as auth_dependencies
 from backend.services import admin_bootstrap_service, admin_service
-from backend.database import Base, SessionLocal, engine
+from backend.database import Base
 from backend.dependencies import get_db
 from backend.main import app
 from backend.models import OperationalEvent, User
+from backend.rate_limiter import auth_rate_limiter
+from backend.routes import admin as admin_routes
 from backend.services import auth_service
 from backend.schemas.user import AdminCreate, UserCreate
 from backend.security import decode_access_token, hash_password, verify_password
 from backend.services.auth_service import count_admin_users, create_admin_user, register_user
 
 
+TEST_ENGINE = create_engine(
+    "sqlite://",
+    connect_args={"check_same_thread": False},
+    poolclass=StaticPool,
+)
+TestSessionLocal = sessionmaker(bind=TEST_ENGINE, autoflush=False, autocommit=False)
+
+
 @pytest.fixture()
-def db():
-    Base.metadata.create_all(bind=engine)
-    session = SessionLocal()
+def isolated_database(monkeypatch):
+    auth_rate_limiter.reset()
+    Base.metadata.drop_all(bind=TEST_ENGINE)
+    Base.metadata.create_all(bind=TEST_ENGINE)
+    monkeypatch.setattr(admin_cli, "SessionLocal", TestSessionLocal)
+    yield
+    Base.metadata.drop_all(bind=TEST_ENGINE)
+    auth_rate_limiter.reset()
+
+
+@pytest.fixture()
+def db(isolated_database):
+    session = TestSessionLocal()
     try:
         yield session
         session.rollback()
-        session.query(User).delete()
-        session.commit()
     finally:
+        auth_rate_limiter.reset()
         session.close()
 
 
@@ -339,6 +360,24 @@ def test_web_first_admin_bootstrap_rejects_invalid_token_and_non_owner_email(
     assert db.query(User).count() == 0
 
 
+def test_web_admin_bootstrap_rate_limits_invalid_tokens(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "web-owner@example.com")
+    payload = {
+        "full_name": "Web Owner",
+        "email": "web-owner@example.com",
+        "password": "WebOwner123",
+        "bootstrap_token": "incorrect-bootstrap-token",
+    }
+
+    for _ in range(admin_routes.ADMIN_BOOTSTRAP_FAILURE_LIMIT):
+        assert client.post("/api/v1/admin/bootstrap", json=payload).status_code == 403
+
+    blocked = client.post("/api/v1/admin/bootstrap", json=payload)
+    assert blocked.status_code == 429
+    assert int(blocked.headers["Retry-After"]) > 0
+    assert db.query(User).count() == 0
+
+
 def test_web_first_admin_bootstrap_requires_valid_owner_configuration(
     client, db, monkeypatch
 ):
@@ -380,6 +419,7 @@ def test_web_first_admin_bootstrap_requires_explicit_confirmation_to_repair_owne
             password="ExistingOwner123",
         ),
     )
+    old_token = _login(client, existing.email, "ExistingOwner123")
     original_hash = existing.hashed_password
     payload = {
         "full_name": "Existing Owner",
@@ -403,6 +443,15 @@ def test_web_first_admin_bootstrap_requires_explicit_confirmation_to_repair_owne
     assert owner.is_active is True
     assert owner.hashed_password != original_hash
     assert verify_password("NewOwnerPassword123", owner.hashed_password)
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {old_token}"},
+    ).status_code == 401
+    new_token = _login(client, owner.email, "NewOwnerPassword123")
+    assert client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {new_token}"},
+    ).status_code == 200
 
 
 def test_web_first_admin_bootstrap_serializes_concurrent_attempts(
@@ -612,6 +661,57 @@ def test_inactive_admin_cannot_login_or_use_admin_endpoint(client, db, monkeypat
         "/api/v1/analytics/system",
         headers={"Authorization": f"Bearer {token}"},
     ).status_code == 401
+
+
+def test_password_reset_invalidates_admin_session_but_preserves_admin_role(client, db, monkeypatch):
+    _configure_admin_owner(monkeypatch, "owner@example.com")
+    admin = _create_admin(db, "owner@example.com", "OwnerPassword123")
+    old_token = _login(client, admin.email, "OwnerPassword123")
+    monkeypatch.setattr(auth_service, "get_settings", get_settings)
+    reset_token = auth_service.create_password_reset_token(admin)
+
+    reset = client.post(
+        "/api/v1/auth/reset-password",
+        json={"token": reset_token, "password": "NewOwnerPassword123"},
+    )
+    assert reset.status_code == 200
+    assert client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {old_token}"},
+    ).status_code == 401
+
+    new_token = _login(client, admin.email, "NewOwnerPassword123")
+    assert client.get(
+        "/api/v1/admin/users",
+        headers={"Authorization": f"Bearer {new_token}"},
+    ).status_code == 200
+    db.refresh(admin)
+    assert admin.role == "admin"
+
+
+def test_token_version_migration_defaults_existing_users_and_future_rows_to_zero():
+    migration_engine = create_engine("sqlite://")
+    migration_path = Path(__file__).resolve().parents[1] / "alembic" / "versions" / "f4a12d9c6e83_user_token_version.py"
+
+    try:
+        with migration_engine.begin() as connection:
+            connection.execute(text("CREATE TABLE users (id INTEGER PRIMARY KEY, email TEXT NOT NULL)"))
+            connection.execute(text("INSERT INTO users (id, email) VALUES (1, 'existing@example.com')"))
+            migration_context = MigrationContext.configure(connection)
+            with Operations.context(migration_context):
+                runpy.run_path(str(migration_path))["upgrade"]()
+
+            assert connection.execute(
+                text("SELECT token_version FROM users WHERE id = 1")
+            ).scalar_one() == 0
+            connection.execute(
+                text("INSERT INTO users (id, email) VALUES (2, 'new@example.com')")
+            )
+            assert connection.execute(
+                text("SELECT token_version FROM users WHERE id = 2")
+            ).scalar_one() == 0
+    finally:
+        migration_engine.dispose()
 
 
 def test_admin_limit_migration_blocks_third_and_reactivation(monkeypatch):
@@ -858,6 +958,7 @@ def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, 
     )
     db.add_all([target, other_admin])
     db.commit()
+    target_token = _login(client, target.email, "ManagedPassword123")
     headers = {"Authorization": f"Bearer {_login(client, admin.email, 'OwnerPassword123')}"}
 
     deactivated = client.patch(
@@ -868,6 +969,10 @@ def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, 
     assert deactivated.status_code == 200
     assert deactivated.json()["is_active"] is False
     assert "hashed_password" not in deactivated.json()
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {target_token}"},
+    ).status_code == 401
     assert client.post(
         "/api/v1/auth/login",
         json={"email": target.email, "password": "ManagedPassword123"},
@@ -880,9 +985,18 @@ def test_admin_can_deactivate_and_reactivate_standard_accounts_only(client, db, 
     )
     assert reactivated.status_code == 200
     assert reactivated.json()["is_active"] is True
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {target_token}"},
+    ).status_code == 401
     assert client.post(
         "/api/v1/auth/login",
         json={"email": target.email, "password": "ManagedPassword123"},
+    ).status_code == 200
+    new_token = _login(client, target.email, "ManagedPassword123")
+    assert client.get(
+        "/api/v1/auth/me",
+        headers={"Authorization": f"Bearer {new_token}"},
     ).status_code == 200
 
     assert client.patch(

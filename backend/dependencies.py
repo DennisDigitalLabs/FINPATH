@@ -52,13 +52,23 @@ def get_current_user(
     )
     try:
         payload = decode_access_token(token)
+        token_type = payload.get("type")
+        token_version = payload.get("token_version")
+        if token_type == "password_reset":
+            raise credentials_exception
+        if (
+            token_type != "access"
+            or type(token_version) is not int
+            or token_version < 0
+        ):
+            raise credentials_exception
         subject = payload.get("sub")
         user_id = int(subject) if subject is not None else None
     except (JWTError, TypeError, ValueError):
         raise credentials_exception
 
     user = db.query(User).filter(User.id == user_id).first()
-    if user is None or not user.is_active:
+    if user is None or not user.is_active or user.token_version != token_version:
         raise credentials_exception
     return user
 

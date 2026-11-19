@@ -389,6 +389,8 @@ def update_user_active_status(
 	is_active: bool,
 	actor: User,
 ) -> User:
+	if user.is_active != is_active:
+		user.token_version += 1
 	user.is_active = is_active
 	add_admin_audit_log(
 		db,

@@ -119,7 +119,11 @@ def authenticate_user(db: Session, credentials: UserLogin) -> User | None:
 
 
 def issue_access_token(user: User) -> str:
-	return create_access_token(subject=str(user.id), role=user.role)
+	return create_access_token(
+		subject=str(user.id),
+		role=user.role,
+		token_version=user.token_version,
+	)
 
 
 def _password_fingerprint(password_hash: str) -> str:
@@ -164,4 +168,5 @@ def get_user_from_password_reset_token(db: Session, token: str) -> User | None:
 
 def reset_password(db: Session, user: User, password: str) -> None:
 	user.hashed_password = hash_password(password)
+	user.token_version += 1
 	db.commit()

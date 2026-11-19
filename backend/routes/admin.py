@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from backend.dependencies import get_current_admin, get_db
 from backend.models import OperationalEvent, User
+from backend.rate_limiter import auth_rate_limiter
 from backend.schemas.admin import (
 	AdminBootstrapCreate,
 	AdminBootstrapStatus,
@@ -48,6 +49,8 @@ from backend.services.admin_service import (
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["administration"])
+ADMIN_BOOTSTRAP_FAILURE_LIMIT = 5
+ADMIN_BOOTSTRAP_RATE_LIMIT_WINDOW_SECONDS = 900
 
 
 @router.get("/bootstrap/status", response_model=AdminBootstrapStatus)
@@ -66,14 +69,33 @@ def create_first_admin(
 	admin_data: AdminBootstrapCreate,
 	db: Session = Depends(get_db),
 ) -> User:
+	retry_after = auth_rate_limiter.retry_after(
+		"admin_bootstrap",
+		str(admin_data.email),
+		ADMIN_BOOTSTRAP_FAILURE_LIMIT,
+		ADMIN_BOOTSTRAP_RATE_LIMIT_WINDOW_SECONDS,
+	)
+	if retry_after:
+		raise HTTPException(
+			status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+			detail="Too many attempts. Please try again later.",
+			headers={"Retry-After": str(retry_after)},
+		)
 	try:
-		return bootstrap_first_admin(
+		admin = bootstrap_first_admin(
 			db,
 			admin_data,
 			admin_data.bootstrap_token,
 			admin_data.confirm_existing_owner,
 		)
+		auth_rate_limiter.clear("admin_bootstrap", str(admin_data.email))
+		return admin
 	except AdminBootstrapAuthorizationError as exc:
+		auth_rate_limiter.record(
+			"admin_bootstrap",
+			str(admin_data.email),
+			ADMIN_BOOTSTRAP_RATE_LIMIT_WINDOW_SECONDS,
+		)
 		raise HTTPException(
 			status_code=status.HTTP_403_FORBIDDEN,
 			detail="Bootstrap authorization failed.",
@@ -253,7 +275,7 @@ def admin_health(
 		db.execute(text("SELECT 1"))
 	except SQLAlchemyError as exc:
 		db.rollback()
-		logger.warning("Admin health check database query failed", exc_info=exc)
+		logger.warning("Admin health check database query failed")
 		raise HTTPException(
 			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
 			detail="Database health check failed",

@@ -1,4 +1,6 @@
 from datetime import datetime, timedelta, timezone
+import asyncio
+from types import SimpleNamespace
 
 import pytest
 from fastapi import HTTPException
@@ -7,6 +9,7 @@ from jose import jwt
 from pydantic import ValidationError
 
 from backend.config import Settings, get_settings
+from backend import database
 from backend.dependencies import get_current_user
 from backend.main import app
 from backend.security import verify_password
@@ -57,6 +60,73 @@ def test_production_rejects_debug_and_wildcard_cors():
             SECRET_KEY="x" * 40,
             CORS_ORIGINS=["*"],
         )
+
+
+def test_production_requires_postgresql_and_enforces_database_tls(monkeypatch):
+    for name in ("DB_USER", "DB_PASSWORD", "DB_HOST", "DB_PORT", "DB_NAME"):
+        monkeypatch.delenv(name, raising=False)
+    common = {
+        "ENVIRONMENT": "production",
+        "DEBUG": False,
+        "SECRET_KEY": "x" * 40,
+        "CORS_ORIGINS": ["https://app.example"],
+        "FRONTEND_URL": "https://app.example",
+    }
+
+    with pytest.raises(ValidationError, match="PostgreSQL"):
+        Settings(**common, DATABASE_URL="sqlite://")
+
+    settings = Settings(
+        **common,
+        DATABASE_URL="postgresql://test-user:test-password@db.example/finpath",
+    )
+    assert settings.get_database_url().endswith("?sslmode=require")
+
+    with pytest.raises(ValidationError, match="SSL"):
+        Settings(
+            **common,
+            DATABASE_URL=(
+                "postgresql://test-user:test-password@db.example/finpath"
+                "?sslmode=disable"
+            ),
+        )
+
+
+def test_production_rejects_non_https_origins_and_sql_echo():
+    with pytest.raises(ValidationError, match="HTTPS"):
+        Settings(
+            ENVIRONMENT="production",
+            DEBUG=False,
+            SECRET_KEY="x" * 40,
+            DATABASE_URL="postgresql://test-user:test-password@db.example/finpath",
+            CORS_ORIGINS=["http://app.example"],
+            FRONTEND_URL="https://app.example",
+        )
+
+    with pytest.raises(ValidationError, match="SQLALCHEMY_ECHO"):
+        Settings(
+            ENVIRONMENT="production",
+            DEBUG=False,
+            SECRET_KEY="x" * 40,
+            DATABASE_URL="postgresql://test-user:test-password@db.example/finpath",
+            CORS_ORIGINS=["https://app.example"],
+            SQLALCHEMY_ECHO=True,
+            FRONTEND_URL="https://app.example",
+        )
+
+
+def test_production_startup_does_not_create_schema(monkeypatch):
+    called = False
+
+    def fail_create_all(*_args, **_kwargs):
+        nonlocal called
+        called = True
+        raise AssertionError("Production startup must use Alembic migrations")
+
+    monkeypatch.setattr(database, "settings", SimpleNamespace(is_production=True))
+    monkeypatch.setattr(database.Base.metadata, "create_all", fail_create_all)
+    asyncio.run(database.init_db())
+    assert called is False
 
 
 def test_example_secret_key_placeholder_is_rejected():

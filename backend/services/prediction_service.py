@@ -8,7 +8,7 @@ from backend.config import get_settings
 from backend.models import Assessment, Prediction, Recommendation, User
 from backend.schemas.prediction import PredictionCreate
 from backend.services.ml_input_mapper import MLInputMapper, MLInputValidationError
-from ml.predict import FinpathPredictor
+from ml.predict import FinpathPredictor, ModelArtifactIntegrityError
 
 
 class PredictionUnavailableError(RuntimeError):
@@ -155,7 +155,12 @@ class RealFinpathPredictor:
 		self.loader = ModelArtifactLoader(configured)
 		artifact = self.loader.validate_path()
 		self.model_dir = artifact.parent
-		self.model = FinpathPredictor(model_dir=str(self.model_dir))
+		try:
+			self.model = FinpathPredictor(model_dir=str(self.model_dir))
+		except ModelArtifactIntegrityError as exc:
+			raise PredictionUnavailableError(
+				"The FINPATH prediction artifact failed integrity verification"
+			) from exc
 
 	def predict(self, model_input: Any) -> Any:
 		try:

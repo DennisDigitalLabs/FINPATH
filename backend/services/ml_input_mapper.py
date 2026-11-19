@@ -201,7 +201,7 @@ class MLInputMapper:
 		if label in MLInputMapper.AGE_CODE_MAP:
 			return MLInputMapper.AGE_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid age range '{label}'. "
+			"Invalid age range. "
 			f"Expected one of: {', '.join(MLInputMapper.AGE_CODE_MAP.keys())}"
 		)
 
@@ -216,7 +216,7 @@ class MLInputMapper:
 		if label in MLInputMapper.SEX_CODE_MAP:
 			return MLInputMapper.SEX_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid sex value '{label}'. "
+			"Invalid sex value. "
 			f"Expected one of: {', '.join(set(MLInputMapper.SEX_CODE_MAP.keys()))}"
 		)
 
@@ -231,8 +231,7 @@ class MLInputMapper:
 		if label in MLInputMapper.COUNTY_CODE_MAP:
 			return MLInputMapper.COUNTY_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid county '{label}'. "
-			f"Expected one of the 47 Kenya counties"
+			"Invalid county. Expected one of the 47 Kenya counties"
 		)
 
 	@staticmethod
@@ -246,7 +245,7 @@ class MLInputMapper:
 		if label in MLInputMapper.EDUCATION_CODE_MAP:
 			return MLInputMapper.EDUCATION_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid education level '{label}'. "
+			"Invalid education level. "
 			f"Expected one of: {', '.join(MLInputMapper.EDUCATION_CODE_MAP.keys())}"
 		)
 
@@ -261,7 +260,7 @@ class MLInputMapper:
 		if label in MLInputMapper.MARITAL_STATUS_CODE_MAP:
 			return MLInputMapper.MARITAL_STATUS_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid marital status '{label}'. "
+			"Invalid marital status. "
 			f"Expected one of: {', '.join(MLInputMapper.MARITAL_STATUS_CODE_MAP.keys())}"
 		)
 
@@ -276,7 +275,7 @@ class MLInputMapper:
 		if label in MLInputMapper.BINARY_YES_NO_MAP:
 			return MLInputMapper.BINARY_YES_NO_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid value '{label}' for {field_name}. "
+			f"Invalid value for {field_name}. "
 			f"Expected 'Yes', 'No', 1, or 0"
 		)
 
@@ -291,7 +290,7 @@ class MLInputMapper:
 		if label in MLInputMapper.SACCO_USE_CODE_MAP:
 			return MLInputMapper.SACCO_USE_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid SACCO usage '{label}'. "
+			"Invalid SACCO usage. "
 			f"Expected 'No', 'Occasional', or 'Regular'"
 		)
 
@@ -306,7 +305,7 @@ class MLInputMapper:
 		if label in MLInputMapper.MOBILE_MONEY_USE_CODE_MAP:
 			return MLInputMapper.MOBILE_MONEY_USE_CODE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid mobile money usage '{label}'. "
+			"Invalid mobile money usage. "
 			f"Expected 'No', 'Occasional', or 'Regular'"
 		)
 
@@ -321,7 +320,7 @@ class MLInputMapper:
 		if label in MLInputMapper.MOBILE_MONEY_FREQUENCY_MAP:
 			return MLInputMapper.MOBILE_MONEY_FREQUENCY_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid frequency '{label}'. Expected 1-4 or a frequency label"
+			"Invalid frequency. Expected 1-4 or a frequency label"
 		)
 
 	@staticmethod
@@ -331,12 +330,12 @@ class MLInputMapper:
 			raise MLInputValidationError("Livelihood count is required")
 		try:
 			count = int(value)
-			if count < 1:
+			if count < 1 or count > 10:
 				raise ValueError
 			return count
 		except (TypeError, ValueError):
 			raise MLInputValidationError(
-				f"Livelihood count must be an integer >= 1, got '{value}'"
+				"Livelihood count must be an integer between 1 and 10"
 			)
 
 	@staticmethod
@@ -350,7 +349,7 @@ class MLInputMapper:
 		if label in MLInputMapper.FINANCIAL_LITERACY_SCORE_MAP:
 			return MLInputMapper.FINANCIAL_LITERACY_SCORE_MAP[label]
 		raise MLInputValidationError(
-			f"Invalid financial literacy score '{label}'. Expected 1-4"
+			"Invalid financial literacy score. Expected 1-4"
 		)
 
 	# === PUBLIC MAPPER ===

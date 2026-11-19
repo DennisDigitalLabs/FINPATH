@@ -10,6 +10,7 @@ from sklearn.metrics import ConfusionMatrixDisplay,roc_curve,auc
 from xgboost import XGBClassifier
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from ml.feature_engineering import engineer_features
+from ml.predict import write_model_artifact_manifest
 from ml.data_preprocessing import build_preprocessor
 from ml.target_definition import make_target
 from ml.evaluate_model import evaluate
@@ -26,6 +27,6 @@ def main():
  params={'model__n_estimators':[100,150,200],'model__max_depth':[3,4,5,6],'model__learning_rate':[.03,.05,.1],'model__subsample':[.75,.9,1.0],'model__colsample_bytree':[.75,.9,1.0]}
  cv=StratifiedKFold(5,shuffle=True,random_state=42); search=RandomizedSearchCV(pipe,params,n_iter=4,scoring='f1_macro',cv=cv,random_state=42,n_jobs=1,refit=True); search.fit(Xtr,ytr); tuned=evaluate(search.best_estimator_,Xte,yte); pd.DataFrame(search.cv_results_).sort_values('rank_test_score').to_csv(ROOT/'reports/tuning_results.csv',index=False)
  MD.mkdir(parents=True,exist_ok=True); joblib.dump(search.best_estimator_,MD/'finpath_model.joblib'); joblib.dump(le,MD/'label_encoder.joblib'); pre=search.best_estimator_.named_steps['preprocessor']; joblib.dump(pre.named_transformers_['num'].named_steps['scaler'],MD/'scaler.joblib'); joblib.dump(pre.named_transformers_['cat'].named_steps['encoder'],MD/'encoder.joblib'); (MD/'feature_names.json').write_text(json.dumps(list(pre.get_feature_names_out()),indent=2))
- meta={'model_version':'v1','dataset_file':'data/raw/finaccess_2024/2024_Finaccess_Publicdata.dta','raw_rows':int(len(pd.read_stata(RAW,convert_categoricals=False))),'youth_rows':int(len(raw)),'train_rows':int(len(Xtr)),'test_rows':int(len(Xte)),'target':'nfh_categories','target_labels':list(le.classes_),'random_state':42,'best_params':search.best_params_,'test_metrics':{k:v for k,v in tuned.items() if k not in ['confusion_matrix','classification_report']},'required_features_unavailable':['debt_to_income_ratio','informal_financial_ratio'],'note':'No income amount or financial-asset amount field was identified in the supplied public file, so those two guide-defined ratios are not fabricated or used.'}; (MD/'metadata.json').write_text(json.dumps(meta,indent=2,default=str))
+ meta={'model_version':'v1','dataset_file':'data/raw/finaccess_2024/2024_Finaccess_Publicdata.dta','raw_rows':int(len(pd.read_stata(RAW,convert_categoricals=False))),'youth_rows':int(len(raw)),'train_rows':int(len(Xtr)),'test_rows':int(len(Xte)),'target':'nfh_categories','target_labels':list(le.classes_),'random_state':42,'best_params':search.best_params_,'test_metrics':{k:v for k,v in tuned.items() if k not in ['confusion_matrix','classification_report']},'required_features_unavailable':['debt_to_income_ratio','informal_financial_ratio'],'note':'No income amount or financial-asset amount field was identified in the supplied public file, so those two guide-defined ratios are not fabricated or used.'}; (MD/'metadata.json').write_text(json.dumps(meta,indent=2,default=str)); write_model_artifact_manifest(MD)
  print(comp.to_string(index=False)); print('Tuned:',tuned); print('Best:',search.best_params_)
 if __name__=='__main__': main()

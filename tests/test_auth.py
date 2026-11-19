@@ -15,6 +15,7 @@ from backend.dependencies import get_current_admin, get_db
 from backend.main import app
 from backend.models import User
 from backend.routes import auth as auth_routes
+from backend.rate_limiter import auth_rate_limiter
 from backend.security import create_access_token, verify_password
 from backend.services import email_service
 from backend.services.auth_service import create_password_reset_token
@@ -42,10 +43,12 @@ client = TestClient(app)
 
 @pytest.fixture(autouse=True)
 def clean_database():
+	auth_rate_limiter.reset()
 	app.dependency_overrides[get_db] = override_get_db
 	Base.metadata.drop_all(bind=TEST_ENGINE)
 	Base.metadata.create_all(bind=TEST_ENGINE)
 	yield
+	auth_rate_limiter.reset()
 	app.dependency_overrides.pop(get_db, None)
 
 
@@ -115,6 +118,9 @@ def test_login_success_and_auth_me():
 	assert response.status_code == 200
 	token = response.json()["access_token"]
 	assert response.json()["token_type"] == "bearer"
+	claims = jwt.decode(token, get_settings().SECRET_KEY, algorithms=[get_settings().ALGORITHM])
+	assert claims["type"] == "access"
+	assert claims["token_version"] == 0
 	me = client.get("/api/v1/auth/me", headers={"Authorization": f"Bearer {token}"})
 	assert me.status_code == 200
 	assert me.json()["email"] == "amina@example.com"
@@ -133,6 +139,38 @@ def test_invalid_login_does_not_reveal_account_state():
 	)
 	assert wrong_password.status_code == missing_user.status_code == 401
 	assert wrong_password.json() == missing_user.json()
+
+
+def test_login_rate_limit_blocks_repeated_failures_and_success_clears_the_window():
+	register_user()
+	for _ in range(auth_routes.LOGIN_FAILURE_LIMIT - 1):
+		response = client.post(
+			"/api/v1/auth/login",
+			json={"email": "amina@example.com", "password": "Wrong123"},
+		)
+		assert response.status_code == 401
+
+	assert client.post(
+		"/api/v1/auth/login",
+		json={"email": "amina@example.com", "password": "Secure123"},
+	).status_code == 200
+	assert client.post(
+		"/api/v1/auth/login",
+		json={"email": "amina@example.com", "password": "Wrong123"},
+	).status_code == 401
+
+	for _ in range(auth_routes.LOGIN_FAILURE_LIMIT - 1):
+		client.post(
+			"/api/v1/auth/login",
+			json={"email": "amina@example.com", "password": "Wrong123"},
+		)
+	blocked = client.post(
+		"/api/v1/auth/login",
+		json={"email": "amina@example.com", "password": "Wrong123"},
+	)
+	assert blocked.status_code == 429
+	assert int(blocked.headers["Retry-After"]) > 0
+	assert "email" not in blocked.text
 
 
 def test_inactive_user_cannot_login():
@@ -180,7 +218,7 @@ def test_jwt_contains_only_minimal_identity_claims():
 	payload = jwt.decode(token, get_settings().SECRET_KEY, algorithms=[get_settings().ALGORITHM])
 	assert payload["sub"] == "42"
 	assert payload["role"] == "user"
-	assert set(payload) == {"sub", "role", "iat", "exp"}
+	assert set(payload) == {"sub", "role", "type", "token_version", "iat", "exp"}
 
 
 def get_password_reset_token(email="amina@example.com"):
@@ -205,6 +243,28 @@ def test_forgot_password_sends_reset_email_when_smtp_is_configured(monkeypatch):
 	assert emails[0][0] == "amina@example.com"
 	assert emails[0][1].startswith(f"{get_settings().FRONTEND_URL}/reset-password#token=")
 	assert "#token=" in emails[0][1]
+
+
+def test_password_reset_requests_are_rate_limited_without_account_enumeration(monkeypatch):
+	emails = []
+	monkeypatch.setattr(auth_routes, "password_reset_email_configured", lambda: True)
+	monkeypatch.setattr(
+		auth_routes,
+		"send_password_reset_email",
+		lambda recipient, url: emails.append((recipient, url)),
+	)
+	register_user()
+
+	responses = [
+		client.post(
+			"/api/v1/auth/forgot-password",
+			json={"email": "amina@example.com"},
+		)
+		for _ in range(auth_routes.PASSWORD_RESET_REQUEST_LIMIT + 1)
+	]
+	assert all(response.status_code == 202 for response in responses)
+	assert all(response.json() == responses[0].json() for response in responses)
+	assert len(emails) == auth_routes.PASSWORD_RESET_REQUEST_LIMIT
 
 
 def test_forgot_password_returns_explicit_unavailable_error_without_smtp(monkeypatch):
@@ -322,6 +382,76 @@ def test_successful_password_reset_invalidates_old_password_and_token():
 	assert old_password.status_code == 401
 	assert new_password.status_code == 200
 	assert used_token.status_code == 400
+
+
+def test_password_reset_token_cannot_authenticate_to_user_or_admin_endpoints():
+	register_user()
+	db = TestSessionLocal()
+	user = db.query(User).filter(User.email == "amina@example.com").one()
+	user.role = "admin"
+	db.commit()
+	token = create_password_reset_token(user)
+	db.close()
+
+	headers = {"Authorization": f"Bearer {token}"}
+	assert client.get("/api/v1/auth/me", headers=headers).status_code == 401
+	assert client.get("/api/v1/admin/users", headers=headers).status_code == 401
+
+
+def test_password_reset_invalidates_existing_access_token_and_allows_new_login():
+	register_user()
+	old_token = client.post(
+		"/api/v1/auth/login",
+		json={"email": "amina@example.com", "password": "Secure123"},
+	).json()["access_token"]
+	db = TestSessionLocal()
+	user = db.query(User).filter(User.email == "amina@example.com").one()
+	reset_token = create_password_reset_token(user)
+	db.close()
+
+	reset = client.post(
+		"/api/v1/auth/reset-password",
+		json={"token": reset_token, "password": "NewSecure456"},
+	)
+	assert reset.status_code == 200
+	assert client.get(
+		"/api/v1/auth/me",
+		headers={"Authorization": f"Bearer {old_token}"},
+	).status_code == 401
+
+	new_token = client.post(
+		"/api/v1/auth/login",
+		json={"email": "amina@example.com", "password": "NewSecure456"},
+	).json()["access_token"]
+	assert client.get(
+		"/api/v1/auth/me",
+		headers={"Authorization": f"Bearer {new_token}"},
+	).status_code == 200
+
+
+@pytest.mark.parametrize(
+	"additional_claims",
+	[
+		pytest.param({}, id="legacy-token"),
+		pytest.param({"type": "access"}, id="missing-token-version"),
+		pytest.param({"token_version": 0}, id="missing-token-purpose"),
+		pytest.param({"type": "access", "token_version": -1}, id="negative-token-version"),
+	],
+)
+def test_access_tokens_require_explicit_purpose_and_valid_version(additional_claims):
+	register_user()
+	now = datetime.now(timezone.utc)
+	claims = {
+		"sub": "1",
+		"role": "user",
+		"iat": now,
+		"exp": now + timedelta(minutes=get_settings().ACCESS_TOKEN_EXPIRE_MINUTES),
+	} | additional_claims
+	token = jwt.encode(claims, get_settings().SECRET_KEY, algorithm=get_settings().ALGORITHM)
+	assert client.get(
+		"/api/v1/auth/me",
+		headers={"Authorization": f"Bearer {token}"},
+	).status_code == 401
 
 
 def test_weak_reset_password_is_rejected():

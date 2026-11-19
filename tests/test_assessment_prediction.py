@@ -65,7 +65,7 @@ def create_assessment(token: str, status: str = "draft"):
     return client.post(
         "/api/v1/assessments",
         headers={"Authorization": f"Bearer {token}"},
-        json={"assessment_data": {"future_feature": 1}, "assessment_status": status},
+        json={"assessment_data": {"age_range": "25-34"}, "assessment_status": status},
     )
 
 
@@ -131,7 +131,7 @@ def test_assessment_crud_and_user_scoped_list():
     updated = client.put(
         f"/api/v1/assessments/{assessment_id}",
         headers={"Authorization": f"Bearer {token}"},
-        json={"assessment_status": "completed", "assessment_data": {"score": 0.8}},
+        json={"assessment_status": "completed", "assessment_data": {"age_range": "25-34"}},
     )
     assert updated.status_code == 200
     assert updated.json()["assessment_status"] == "completed"
@@ -141,7 +141,7 @@ def test_assessment_crud_and_user_scoped_list():
         headers={"Authorization": f"Bearer {token}"},
     )
     assert fetched.status_code == 200
-    assert fetched.json()["assessment_data"] == {"score": 0.8}
+    assert fetched.json()["assessment_data"] == {"age_range": "25-34"}
 
     deleted = client.delete(
         f"/api/v1/assessments/{assessment_id}",
@@ -232,7 +232,7 @@ def test_assessment_ownership_is_enforced():
     assert client.put(
         f"/api/v1/assessments/{assessment_id}",
         headers={"Authorization": f"Bearer {other_token}"},
-        json={"assessment_data": {"attempt": "unauthorized"}},
+        json={"assessment_data": {"age_range": "35-44"}},
     ).status_code == 404
     assert client.delete(
         f"/api/v1/assessments/{assessment_id}",
@@ -257,7 +257,7 @@ def test_prediction_requires_completed_assessment_and_rejects_incomplete_input()
         json={"assessment_id": completed_id},
     )
     assert incomplete.status_code == 409
-    assert incomplete.json()["detail"] == "Invalid assessment data: Age range is required"
+    assert incomplete.json()["detail"] == "Invalid assessment data: Gender/Sex is required"
 
 
 def test_valid_assessment_still_returns_503_when_model_is_unavailable():
@@ -426,7 +426,7 @@ def test_injected_ml_predictor_stores_and_retrieves_prediction():
 
     class TestPredictor:
         def predict(self, assessment_data: dict) -> PredictionCreate:
-            assert assessment_data == {"future_feature": 1}
+            assert assessment_data == {"age_range": "25-34"}
             return PredictionCreate(
                 assessment_id=assessment_id,
                 risk_level="medium",
@@ -434,7 +434,7 @@ def test_injected_ml_predictor_stores_and_retrieves_prediction():
                 probability=0.7,
                 confidence=0.9,
                 explanation="Injected test model output.",
-                contributing_factors={"future_feature": 1},
+                contributing_factors={"age_range": 1},
                 model_version="test-model",
             )
 

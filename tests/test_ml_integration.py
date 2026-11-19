@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 
 import pytest
@@ -11,6 +12,13 @@ from backend.services.prediction_service import (
     PredictionService,
     PredictionUnavailableError,
     UnavailableMLPredictor,
+)
+from ml.predict import (
+    ARTIFACT_FILES,
+    FinpathPredictor,
+    ModelArtifactIntegrityError,
+    verify_model_artifacts,
+    write_model_artifact_manifest,
 )
 
 
@@ -82,6 +90,62 @@ def test_model_artifact_loader_requires_configured_existing_local_file(tmp_path:
     artifact = tmp_path / "approved-artifact"
     artifact.write_text("test placeholder", encoding="ascii")
     assert ModelArtifactLoader(str(artifact)).validate_path() == artifact
+
+
+def test_model_artifact_manifest_detects_tampering(tmp_path: Path):
+    for filename in ARTIFACT_FILES:
+        contents = f"synthetic-{filename}".encode("ascii")
+        (tmp_path / filename).write_bytes(contents)
+
+    write_model_artifact_manifest(tmp_path)
+    verify_model_artifacts(tmp_path)
+    (tmp_path / "label_encoder.joblib").write_bytes(b"modified")
+    with pytest.raises(ModelArtifactIntegrityError):
+        verify_model_artifacts(tmp_path)
+
+
+def test_model_input_allowlist_drops_context_and_rejects_unknown_fields():
+    normalized = FinpathPredictor._normalize({
+        "Age": 25,
+        "monthly_income": "25000",
+    })
+
+    assert normalized["Age"] == 2
+    assert "monthly_income" not in normalized
+    with pytest.raises(ValueError, match="unsupported fields"):
+        FinpathPredictor._normalize({"Age": 25, "unapproved_field": "value"})
+    with pytest.raises(ValueError, match="Age"):
+        FinpathPredictor._normalize({"Age": 25.5})
+    with pytest.raises(ValueError, match="invalid values"):
+        FinpathPredictor._normalize({"Age": 25, "Sex": {"value": 2}})
+
+
+def test_explainability_failure_does_not_log_exception_text(monkeypatch, caplog, capsys):
+    import numpy as np
+
+    class TestModel:
+        def predict_proba(self, _features):
+            return np.array([[0.2, 0.3, 0.5]])
+
+    class TestLabelEncoder:
+        classes_ = ["High Risk", "Low Risk", "Moderate Risk"]
+
+    monkeypatch.setattr(
+        "ml.predict.joblib.load",
+        lambda path: TestModel() if Path(path).name == "finpath_model.joblib" else TestLabelEncoder(),
+    )
+
+    def fail_with_sensitive_detail(*_args, **_kwargs):
+        raise RuntimeError("SENSITIVE_TEST_DETAIL")
+
+    monkeypatch.setattr("ml.explain_model.explain", fail_with_sensitive_detail)
+    with caplog.at_level(logging.WARNING, logger="ml.predict"):
+        predictor = FinpathPredictor()
+        result = predictor.predict({"Age": 25})
+
+    assert result["risk_category"] == "Moderate Risk"
+    assert "SENSITIVE_TEST_DETAIL" not in caplog.text
+    assert capsys.readouterr().out == ""
 
 
 def test_prediction_service_defaults_to_fail_closed_predictor():

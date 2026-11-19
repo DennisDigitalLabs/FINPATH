@@ -8,9 +8,12 @@ Supports both PostgreSQL (production) and SQLite (development/testing).
 import os
 from functools import lru_cache
 from pathlib import Path
+from urllib.parse import urlsplit
 
 from pydantic import ConfigDict, field_validator, model_validator
 from pydantic_settings import BaseSettings
+from sqlalchemy.engine.url import make_url
+from sqlalchemy.exc import ArgumentError
 
 
 class Settings(BaseSettings):
@@ -62,7 +65,7 @@ class Settings(BaseSettings):
     MODEL_VERSION: str | None = "v1"
     
     # CORS Configuration
-    CORS_ORIGINS: list = ["http://localhost", "http://localhost:3000", "http://localhost:8080"]
+    CORS_ORIGINS: list[str] = ["http://localhost", "http://localhost:3000", "http://localhost:8080"]
 
     @field_validator("SECRET_KEY")
     @classmethod
@@ -101,6 +104,18 @@ class Settings(BaseSettings):
             raise ValueError("DEBUG must be false in production")
         if self.is_production and "*" in self.CORS_ORIGINS:
             raise ValueError("Wildcard CORS origins are not allowed in production")
+        if self.is_production:
+            if not self.CORS_ORIGINS or any(
+                urlsplit(origin).scheme != "https" or not urlsplit(origin).netloc
+                for origin in self.CORS_ORIGINS
+            ):
+                raise ValueError("Production CORS origins must use HTTPS")
+            frontend_url = urlsplit(self.FRONTEND_URL)
+            if frontend_url.scheme != "https" or not frontend_url.netloc:
+                raise ValueError("FRONTEND_URL must use HTTPS in production")
+            if self.SQLALCHEMY_ECHO:
+                raise ValueError("SQLALCHEMY_ECHO must be disabled in production")
+            self.get_database_url()
         return self
     
     def get_database_url(self) -> str:
@@ -119,25 +134,42 @@ class Settings(BaseSettings):
             Database connection URL
         """
         if self.DATABASE_URL and self.DATABASE_URL != "sqlite:///./finpath.db":
-            return self._normalize_database_url(self.DATABASE_URL)
+            database_url = self._normalize_database_url(self.DATABASE_URL)
+        else:
+            # Check for PostgreSQL environment variables
+            db_user = os.getenv("DB_USER")
+            db_password = os.getenv("DB_PASSWORD")
+            db_host = os.getenv("DB_HOST")
+            db_port = os.getenv("DB_PORT", "5432")
+            db_name = os.getenv("DB_NAME")
 
-        # Check for PostgreSQL environment variables
-        db_user = os.getenv("DB_USER")
-        db_password = os.getenv("DB_PASSWORD")
-        db_host = os.getenv("DB_HOST")
-        db_port = os.getenv("DB_PORT", "5432")
-        db_name = os.getenv("DB_NAME")
+            if all([db_user, db_password, db_host, db_name]):
+                database_url = self._normalize_database_url(
+                    f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
+                )
+            elif self.is_production:
+                raise ValueError(
+                    "A PostgreSQL DATABASE_URL or complete DB_* configuration is required in production"
+                )
+            else:
+                return self.DATABASE_URL
 
-        if all([db_user, db_password, db_host, db_name]):
-            return self._normalize_database_url(
-                f"postgresql://{db_user}:{db_password}@{db_host}:{db_port}/{db_name}"
-            )
-
-        if self.is_production:
-            return f"sqlite:///{self.SQLITE_DB_PATH}"
-
-        # Default to SQLite in the project root for local development
-        return self.DATABASE_URL
+        if not self.is_production:
+            return database_url
+        try:
+            parsed_url = make_url(database_url)
+        except (ArgumentError, TypeError):
+            raise ValueError("A valid PostgreSQL DATABASE_URL is required in production") from None
+        if parsed_url.drivername != "postgresql+psycopg":
+            raise ValueError("Production requires PostgreSQL with the psycopg driver")
+        sslmode = parsed_url.query.get("sslmode")
+        if isinstance(sslmode, tuple):
+            raise ValueError("Production database SSL mode must be a single value")
+        if sslmode is None:
+            parsed_url = parsed_url.update_query_dict({"sslmode": "require"})
+        elif sslmode.lower() not in {"require", "verify-ca", "verify-full"}:
+            raise ValueError("Production database SSL must be enabled")
+        return parsed_url.render_as_string(hide_password=False)
 
     @staticmethod
     def _normalize_database_url(database_url: str) -> str:

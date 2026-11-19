@@ -60,7 +60,7 @@ def create_assessment(token: str, status: str = "completed") -> int:
     response = client.post(
         "/api/v1/assessments",
         headers={"Authorization": f"Bearer {token}"},
-        json={"assessment_data": {"feature": 1}, "assessment_status": status},
+        json={"assessment_data": {"age_range": "25-34"}, "assessment_status": status},
     )
     assert response.status_code == 201
     return response.json()["id"]

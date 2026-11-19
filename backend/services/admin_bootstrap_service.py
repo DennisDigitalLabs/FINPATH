@@ -128,6 +128,7 @@ def provision_configured_owner(
 	existing_owner.full_name = owner_data.full_name
 	existing_owner.email = owner_email
 	existing_owner.hashed_password = hash_password(owner_data.password)
+	existing_owner.token_version += 1
 	existing_owner.role = "admin"
 	existing_owner.is_active = True
 	try:

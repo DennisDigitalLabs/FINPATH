@@ -21,12 +21,14 @@ def verify_password(plain_password: str, password_hash: str) -> bool:
 		return False
 
 
-def create_access_token(subject: str, role: str) -> str:
+def create_access_token(subject: str, role: str, token_version: int = 0) -> str:
 	settings = get_settings()
 	now = datetime.now(timezone.utc)
 	payload: dict[str, Any] = {
 		"sub": subject,
 		"role": role,
+		"type": "access",
+		"token_version": token_version,
 		"iat": now,
 		"exp": now + timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES),
 	}

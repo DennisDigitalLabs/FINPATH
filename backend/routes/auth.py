@@ -22,13 +22,26 @@ from backend.services.auth_service import (
 	get_user_by_email,
 	get_user_from_password_reset_token,
 	issue_access_token,
+	normalize_email,
 	register_user,
 	reset_password,
 )
 from backend.services.email_service import password_reset_email_configured, send_password_reset_email
+from backend.rate_limiter import auth_rate_limiter
 
 
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
+LOGIN_FAILURE_LIMIT = 5
+PASSWORD_RESET_REQUEST_LIMIT = 3
+AUTH_RATE_LIMIT_WINDOW_SECONDS = 900
+
+
+def _rate_limited(retry_after: int) -> HTTPException:
+	return HTTPException(
+		status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+		detail="Too many attempts. Please try again later.",
+		headers={"Retry-After": str(retry_after)},
+	)
 
 
 @router.post("/register", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
@@ -44,13 +57,24 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)) -> User:
 
 @router.post("/login", response_model=TokenResponse)
 def login(credentials: UserLogin, db: Session = Depends(get_db)) -> TokenResponse:
+	email = normalize_email(str(credentials.email))
+	retry_after = auth_rate_limiter.retry_after(
+		"login",
+		email,
+		LOGIN_FAILURE_LIMIT,
+		AUTH_RATE_LIMIT_WINDOW_SECONDS,
+	)
+	if retry_after:
+		raise _rate_limited(retry_after)
 	user = authenticate_user(db, credentials)
 	if user is None:
+		auth_rate_limiter.record("login", email, AUTH_RATE_LIMIT_WINDOW_SECONDS)
 		raise HTTPException(
 			status_code=status.HTTP_401_UNAUTHORIZED,
 			detail="Invalid email or password",
 			headers={"WWW-Authenticate": "Bearer"},
 		)
+	auth_rate_limiter.clear("login", email)
 	return TokenResponse(access_token=issue_access_token(user))
 
 
@@ -60,12 +84,27 @@ def forgot_password(
 	db: Session = Depends(get_db),
 ) -> dict[str, str]:
 	settings = get_settings()
-	user = get_user_by_email(db, str(request.email))
 	if not password_reset_email_configured():
 		raise HTTPException(
 			status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
 			detail="Password reset is temporarily unavailable.",
 		)
+	email = str(request.email)
+	normalized_email = normalize_email(email)
+	retry_after = auth_rate_limiter.retry_after(
+		"password_reset",
+		normalized_email,
+		PASSWORD_RESET_REQUEST_LIMIT,
+		AUTH_RATE_LIMIT_WINDOW_SECONDS,
+	)
+	if retry_after:
+		return {"message": "If an account exists for that email, a password reset link will be sent shortly."}
+	auth_rate_limiter.record(
+		"password_reset",
+		normalized_email,
+		AUTH_RATE_LIMIT_WINDOW_SECONDS,
+	)
+	user = get_user_by_email(db, normalized_email)
 	reset_url = None
 	if user is not None and user.is_active:
 		token = create_password_reset_token(user)

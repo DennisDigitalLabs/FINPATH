@@ -96,7 +96,8 @@ async def init_db() -> None:
     current project structure. In production, prefer Alembic migrations executed
     explicitly before the application starts (for example: alembic upgrade head).
     """
-    Base.metadata.create_all(bind=engine)
+    if not settings.is_production:
+        Base.metadata.create_all(bind=engine)
 
 
 async def close_db() -> None:

@@ -6,6 +6,8 @@ ROOT=Path(__file__).resolve().parents[1]
 def explain(payload, model_dir=None):
     import shap
     d=Path(model_dir or ROOT/'models'/'v1')
+    from .predict import verify_model_artifacts
+    verify_model_artifacts(d, ("finpath_model.joblib",))
     model=joblib.load(d/'finpath_model.joblib')
     x=engineer_features(pd.DataFrame([payload]))
     pre=model.named_steps['preprocessor']; est=model.named_steps['model']

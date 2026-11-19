@@ -1,6 +1,8 @@
 .git
 .gitignore
 .github
+data/
+reports/
 .venv
 venv
 .env
